@@ -1,0 +1,6 @@
+name: educate-infrastructure
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: 3DUCATE Infrastructure
