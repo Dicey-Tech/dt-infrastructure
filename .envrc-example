@@ -1,5 +1,4 @@
 export VIRTUAL_ENV="$(pwd)/venv"
 
-export KEY_NAME="KEY_NAME"
-
+# https://github.com/direnv/direnv/wiki/Python#virtualenv
 layout python-venv

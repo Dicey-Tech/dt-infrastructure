@@ -11,24 +11,17 @@ sudo dpkg --configure -a
 # Update Ubuntu 16.04
 sudo apt-get update
 sudo apt-get upgrade -y
-# sudo apt-get install -y awscli
+sudo apt-get install awscli -y
+
 # Create config.yml
 cd ~
+
+#TODO get config from s3
 export PUBLIC_IP=$(curl ifconfig.me)
 echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
+
 # Install open edX
-wget https://raw.githubusercontent.com/BbrSofiane/edx.scripts/master/edx.platform-install.sh
+# TODO find a better to run install
+wget https://raw.githubusercontent.com/BbrSofiane/edx.scripts/master/edx.platform-install.sh 
 chmod +x edx.platform-install.sh
 sudo nohup ./edx.platform-install.sh &
-
-#export OPENEDX_RELEASE=open-release/juniper.master
-
-# 2. Bootstrap the Ansible installation:
-#wget https://raw.githubusercontent.com/edx/configuration/$OPENEDX_RELEASE/util/install/ansible-bootstrap.sh -O - | sudo -H bash
-
-# 3. (Optional) If this is a new installation, randomize the passwords:
-#if test ! -f "my-passwords.yml"; then
-#    wget https://raw.githubusercontent.com/edx/configuration/$OPENEDX_RELEASE/util/install/generate-passwords.sh -O - | bash
-#fi
-# 4. Install Open edX:
-#wget https://raw.githubusercontent.com/edx/configuration/$OPENEDX_RELEASE/util/install/native.sh -O - | bash > install.out

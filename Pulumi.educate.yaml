@@ -4,3 +4,4 @@ config:
   instance:instance_type: t2.large
   instance:keyName: second_try
   instance:ubuntu_1604: ami-0b48089553c9d7962
+  instance:ubuntu_2004: ami-0ed4a9453b39ea8c1
