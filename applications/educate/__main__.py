@@ -3,6 +3,8 @@
 import pulumi
 from pulumi_aws import s3, ec2, ebs
 
+stack = pulumi.get_stack()
+
 config = pulumi.Config("instance")
 
 tags = {
@@ -39,7 +41,7 @@ group = ec2.SecurityGroup(
         ec2.SecurityGroupIngressArgs(
             protocol="tcp",
             from_port=18000,
-            to_port=1899,
+            to_port=18999,
             cidr_blocks=["0.0.0.0/0"],
         ),
     ],

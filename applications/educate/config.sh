@@ -25,3 +25,7 @@ echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\""
 wget https://raw.githubusercontent.com/BbrSofiane/edx.scripts/master/edx.platform-install.sh 
 chmod +x edx.platform-install.sh
 sudo nohup ./edx.platform-install.sh &
+
+# versions.py - Script to list versions of core elements of open edx
+wget https://gist.github.com/fdns/8032710eceea0a2c63c1b4f0a5da8ec1
+# sudo ./version.py > versions.log
