@@ -1,2 +1,3 @@
 config:
   aws:region: eu-west-2
+  networking:az_count: 1

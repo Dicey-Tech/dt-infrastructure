@@ -1,5 +1,5 @@
 """ Open edX native deployment on AWS"""
-
+# TODO Add SSM role to instances in private subnets
 import pulumi
 from pulumi_aws import s3, ec2, ebs
 
