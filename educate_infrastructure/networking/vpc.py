@@ -20,7 +20,7 @@ class Vpc(ComponentResource):
      Engineering team constructs and organizes VPC environments in AWS.
     """
 
-    def __init__(self):
+    def __init__(self, az_count):
         """
         Build an AWS VPC with subnets, internet gateway, and routing table.
 
@@ -31,7 +31,7 @@ class Vpc(ComponentResource):
             for handling things like AWS provider overrides.
         :type opts: Optional[ResourceOptions]
         """
-        # super.__init__("dt:netowrking:VPC")
+        super().__init__("educate:infrastruture:aws:VPC", "educate-app-vpc")
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "True"}
 
@@ -49,8 +49,8 @@ class Vpc(ComponentResource):
 
         self.public_subnet_ids = []
 
-        config = Config("apps_vpc")
-        az_count = config.require_int("az_count")
+        # config = Config("apps_vpc")
+        # az_count = config.require_int("az_count")
         zones = get_availability_zones().names[:az_count]
 
         # TODO make subnet cird programmatically defined
@@ -79,3 +79,6 @@ class Vpc(ComponentResource):
 
     def get_public_subnet_id(self):
         return self.public_subnet_ids[0]
+
+
+#apps_vpc = Vpc(1)

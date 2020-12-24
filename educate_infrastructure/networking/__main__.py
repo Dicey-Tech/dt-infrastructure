@@ -8,9 +8,9 @@ from pulumi_aws import ec2, get_availability_zones, get_ami, GetAmiFilterArgs
 
 from vpc import Vpc
 
-vpc = Vpc()
+apps_vpc = Vpc(1)
 
-pulumi.export("vpc_id", vpc.get_id())
+pulumi.export("vpc_id", apps_vpc.get_id())
 
 size = "t2.micro"
 
@@ -22,7 +22,7 @@ ami = get_ami(
 
 group = ec2.SecurityGroup(
     "test-sg",
-    vpc_id=vpc.get_id(),
+    vpc_id=apps_vpc.get_id(),
     description="Enable HTTP access",
     ingress=[
         ec2.SecurityGroupIngressArgs(
@@ -43,14 +43,14 @@ nohup python -m SimpleHTTPServer 80 &
 server = ec2.Instance(
     "test-ec2-instance",
     instance_type=size,
-    subnet_id=vpc.get_public_subnet_id(),
+    subnet_id=apps_vpc.get_public_subnet_id(),
     vpc_security_group_ids=[group.id],
     user_data=user_data,
     ami=ami.id,
 )
 
-pulumi.export("vpc_id", vpc.get_id())
-pulumi.export("public_subnet_ids", vpc.get_public_subnet_id())
+pulumi.export("vpc_id", apps_vpc.get_id())
+pulumi.export("public_subnet_ids", apps_vpc.get_public_subnet_id())
 pulumi.export("public_ip", server.public_ip)
 pulumi.export("public_dns", server.public_dns)
 
