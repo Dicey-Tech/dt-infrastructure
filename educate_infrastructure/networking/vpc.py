@@ -12,6 +12,7 @@ This includes:
 from pulumi import ComponentResource, Config
 from pulumi_aws import ec2, get_availability_zones
 
+
 # TODO Vpc Component
 class Vpc(ComponentResource):
     """Pulumi component for building all of the necessary pieces of an AWS VPC.
@@ -20,7 +21,7 @@ class Vpc(ComponentResource):
      Engineering team constructs and organizes VPC environments in AWS.
     """
 
-    def __init__(self, az_count):
+    def __init__(self, name: str, az_count: int):
         """
         Build an AWS VPC with subnets, internet gateway, and routing table.
 
@@ -31,16 +32,24 @@ class Vpc(ComponentResource):
             for handling things like AWS provider overrides.
         :type opts: Optional[ResourceOptions]
         """
-        super().__init__("educate:infrastruture:aws:VPC", "educate-app-vpc")
+        self.name = name
+        super().__init__("educate:infrastruture:aws:VPC", self.name)
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "True"}
+        self.vpc = ec2.Vpc(f"{self.name}-vpc", cidr_block="10.0.0.0/16")
 
-        self.vpc = ec2.Vpc("educate-app-vpc", cidr_block="10.0.0.0/16")
-
-        self.igw = ec2.InternetGateway("educate-app-igw", vpc_id=self.vpc.id)
+        self.igw = ec2.InternetGateway(f"{self.name}-igw", vpc_id=self.vpc.id)
 
         self.public_route_table = ec2.RouteTable(
-            "educate-app-rt",
+            f"{self.name}-publi-rt",
+            routes=[
+                ec2.RouteTableRouteArgs(cidr_block="0.0.0.0/0", gateway_id=self.igw.id)
+            ],
+            vpc_id=self.vpc.id,
+        )
+
+        self.private_route_table = ec2.RouteTable(
+            f"{self.name}-private-rt",
             routes=[
                 ec2.RouteTableRouteArgs(cidr_block="0.0.0.0/0", gateway_id=self.igw.id)
             ],
@@ -48,31 +57,13 @@ class Vpc(ComponentResource):
         )
 
         self.public_subnet_ids = []
-
-        # config = Config("apps_vpc")
-        # az_count = config.require_int("az_count")
+        self.private_subnet_ids = []
         zones = get_availability_zones().names[:az_count]
 
         # TODO make subnet cird programmatically defined
         for zone in zones:
-            # TODO Create 1 public and 1 private subnet
-            public_subnet = ec2.Subnet(
-                f"educate-public-subnet-{zone}",
-                assign_ipv6_address_on_creation=False,
-                vpc_id=self.vpc.id,
-                map_public_ip_on_launch=True,
-                cidr_block="10.0.1.0/24",
-                availability_zone=zone,
-                tags=self.tags,
-            )
+            self.create_subnet_pair(zone)
 
-            ec2.RouteTableAssociation(
-                f"educate-app-public-rta-{zone}",
-                route_table_id=self.public_route_table.id,
-                subnet_id=public_subnet.id,
-            )
-
-            self.public_subnet_ids.append(public_subnet.id)
 
     def get_id(self):
         return self.vpc.id
@@ -80,5 +71,58 @@ class Vpc(ComponentResource):
     def get_public_subnet_id(self):
         return self.public_subnet_ids[0]
 
+    def get_private_subnet_id(self):
+        return self.private_subnet_ids[0]
 
-#apps_vpc = Vpc(1)
+    def create_subnet_pair(self, zone: str):
+        public_subnet = ec2.Subnet(
+            f"{self.name}-public-subnet-{zone}",
+            assign_ipv6_address_on_creation=False,
+            vpc_id=self.vpc.id,
+            map_public_ip_on_launch=True,
+            cidr_block="10.0.1.0/24",
+            availability_zone=zone,
+            tags=self.tags,
+        )
+
+        ec2.RouteTableAssociation(
+            f"{self.name}-public-rta-{zone}",
+            route_table_id=self.public_route_table.id,
+            subnet_id=public_subnet.id,
+        )
+
+        self.public_subnet_ids.append(public_subnet.id)
+
+        private_subnet = ec2.Subnet(
+            f"{self.name}-private-subnet-{zone}",
+            assign_ipv6_address_on_creation=False,
+            vpc_id=self.vpc.id,
+            map_public_ip_on_launch=False,
+            cidr_block="10.0.1.0/24",
+            availability_zone=zone,
+            tags=self.tags,
+        )
+
+        eip = ec2.Eip(f"{self.name}-eip-{zone}", tags=self.tags)
+        nat_gateway = ec2.NatGateway(
+            f"{self.name}-natgw-{zone}",
+            subnet_id=public_subnet.id,
+            allocation_id=eip.id,
+            tags=self.tags,
+        )
+        
+        private_rt = ec2.RouteTable(
+            f"pulumi-private-rt-{zone}",
+            vpc_id=self.vpc.id,
+            routes=[{"cidr_block": "0.0.0.0/0", "gateway_id": nat_gateway.id}],
+            tags=self.tags,
+        )
+        
+        ec2.RouteTableAssociation(
+            f"{self.name}-private-rta-{zone}",
+            route_table_id=private_rt.id,
+            subnet_id=private_subnet.id,
+        )
+
+        self.private_subnet_ids.append(private_subnet.id)
+    

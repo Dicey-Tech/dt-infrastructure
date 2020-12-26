@@ -1,45 +1,48 @@
-import pytest
 import pulumi
+import pytest
 
-# TODO move mock to its own file
-class PulumiMock(pulumi.runtime.Mocks):
-    def new_resource(self, token, name, inputs, provider, id_):
-        outputs = inputs
-        if token == "aws:ec2/instance:Instance":
-            outputs = {
-                **inputs,
-                "publicIp": "203.0.113.12",
-                "publicDns": "ec2-203-0-113-12.compute-1.amazonaws.com",
-            }
-        return [name + "_id", outputs]
+from educate_infrastructure.networking.tests import networking_mock
+from educate_infrastructure.networking.vpc import Vpc
 
-    # https://github.com/pulumi/pulumi/blob/8a9b381767c5d14ad2181c41ede4266cd196c839/sdk/python/lib/pulumi/runtime/mocks.py#L40
-    def call(self, token, args, provider):
-        # https://github.com/pulumi/pulumi-aws/blob/ddc4d5623c8bb2e25428f11ab0de487b17795614/sdk/python/pulumi_aws/get_availability_zones.py#L206
-        if token == "aws:index/getAvailabilityZones:getAvailabilityZones":
-            return {"names": ["eu-west-2a", "eu-west-2b", "eu-west-2c"]}
-        # https://github.com/pulumi/pulumi-aws/blob/ddc4d5623c8bb2e25428f11ab0de487b17795614/sdk/python/pulumi_aws/get_ami.py#L487
-        if token == "aws:index/getAmi:getAmi":
-            return {"architecture": "x86_64", "id": "ami-0eb1f3cdeeb8eed2a"}
-        return {}
-
-
-pulumi.runtime.set_mocks(PulumiMock())
-
-from educate_infrastructure.networking.__main__ import apps_vpc
-
-
+# TODO Improve test to verify that there az_count match the number of subnets
 class TestAppsVpc(object):
     """ Initial tests doing basic coverage """
 
     def setup(self):
-        pass
+        self.name = "educate-app-vpc"
+        self.test_vpc = Vpc(name=self.name, az_count=1)
 
     @pulumi.runtime.test
-    def test_vpc_tags(self):
+    def test_vpc_created(self):
+        def check_name(args):
+            resource_name = args[0]
+            assert resource_name == self.name
+
+        return pulumi.Output.all(self.test_vpc.name).apply(check_name)
+
+    @pulumi.runtime.test
+    def test_vpc_has_required_tags(self):
         def check_tags(args):
             urn, tags = args
             assert tags is not None
             assert "pulumi_managed" in tags
 
-        return pulumi.Output.all(apps_vpc.urn, apps_vpc.tags).apply(check_tags)
+        return pulumi.Output.all(self.test_vpc.urn, self.test_vpc.tags).apply(
+            check_tags
+        )
+
+    @pulumi.runtime.test
+    def test_vpc_has_public_subnet(self):
+        def check_public_subnet(args):
+            public_subnet_id = args[0]
+            assert public_subnet_id != ""
+        
+        return pulumi.Output.all(self.test_vpc.get_public_subnet_id()).apply(check_public_subnet)
+    
+    @pulumi.runtime.test
+    def test_vpc_has_private_subnet(self):
+        def check_private_subnet(args):
+            private_subnet_id = args[0]
+            assert private_subnet_id != ""
+
+        return pulumi.Output.all(self.test_vpc.get_private_subnet_id()).apply(check_private_subnet)

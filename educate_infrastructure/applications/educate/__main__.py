@@ -1,7 +1,7 @@
 """ Open edX native deployment on AWS"""
 # TODO Add SSM role to instances in private subnets
 import pulumi
-from pulumi_aws import s3, ec2, ebs
+from pulumi_aws import ebs, ec2, s3
 
 stack = pulumi.get_stack()
 
@@ -66,3 +66,42 @@ openedx = ec2.Instance(
 
 pulumi.export("publicIP", openedx.public_ip)
 pulumi.export("publicHostname", openedx.public_dns)
+
+'''
+size = "t2.micro"
+
+ami = get_ami(
+    most_recent=True,
+    owners=["137112412989"],
+    filters=[GetAmiFilterArgs(name="name", values=["amzn-ami-hvm-*"])],
+)
+
+group = ec2.SecurityGroup(
+    "test-sg",
+    vpc_id=apps_vpc.get_id(),
+    description="Enable HTTP access",
+    ingress=[
+        ec2.SecurityGroupIngressArgs(
+            protocol="tcp",
+            from_port=80,
+            to_port=80,
+            cidr_blocks=["0.0.0.0/0"],
+        )
+    ],
+)
+
+user_data = """
+#!/bin/bash
+echo "Hello, World!" > index.html
+nohup python -m SimpleHTTPServer 80 &
+"""
+
+server = ec2.Instance(
+    "test-ec2-instance",
+    instance_type=size,
+    subnet_id=apps_vpc.get_public_subnet_id(),
+    vpc_security_group_ids=[group.id],
+    user_data=user_data,
+    ami=ami.id,
+)
+'''
