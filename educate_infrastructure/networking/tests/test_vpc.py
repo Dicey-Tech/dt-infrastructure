@@ -2,7 +2,7 @@ import pulumi
 import pytest
 
 from educate_infrastructure.networking.tests import networking_mock
-from educate_infrastructure.networking.vpc import Vpc
+from educate_infrastructure.networking.vpc import DTVpc
 
 # TODO Improve test to verify that there az_count match the number of subnets
 class TestAppsVpc(object):
@@ -10,7 +10,7 @@ class TestAppsVpc(object):
 
     def setup(self):
         self.name = "educate-app-vpc"
-        self.test_vpc = Vpc(name=self.name, az_count=1)
+        self.test_vpc = DTVpc(name=self.name, az_count=1)
 
     @pulumi.runtime.test
     def test_vpc_created(self):
@@ -36,13 +36,17 @@ class TestAppsVpc(object):
         def check_public_subnet(args):
             public_subnet_id = args[0]
             assert public_subnet_id != ""
-        
-        return pulumi.Output.all(self.test_vpc.get_public_subnet_id()).apply(check_public_subnet)
-    
+
+        return pulumi.Output.all(self.test_vpc.get_public_subnet_id()).apply(
+            check_public_subnet
+        )
+
     @pulumi.runtime.test
     def test_vpc_has_private_subnet(self):
         def check_private_subnet(args):
             private_subnet_id = args[0]
             assert private_subnet_id != ""
 
-        return pulumi.Output.all(self.test_vpc.get_private_subnet_id()).apply(check_private_subnet)
+        return pulumi.Output.all(self.test_vpc.get_private_subnet_id()).apply(
+            check_private_subnet
+        )

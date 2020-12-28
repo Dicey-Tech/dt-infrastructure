@@ -1,7 +1,7 @@
 """This module defines a Pulumi component resource for encapsulating our best practices for building an AWS VPC.
 
 This includes:
-- TODO Create the named VPC with appropriate tags
+- Create the named VPC with appropriate tags
 - TODO Create a minimum of 3 subnets across multiple availability zones
 - TODO Create an internet gateway
 - TODO Create an IPv6 egress gateway (Why??)
@@ -9,12 +9,11 @@ This includes:
 - TODO Create a routing table to include the relevant peers and their networks
 - TODO Create an RDS subnet group (Why??)
 """
-from pulumi import ComponentResource, Config
+from pulumi import ComponentResource
 from pulumi_aws import ec2, get_availability_zones
 
 
-# TODO Vpc Component
-class Vpc(ComponentResource):
+class DTVpc(ComponentResource):
     """Pulumi component for building all of the necessary pieces of an AWS VPC.
 
     A component resource that encapsulates all of the standard practices of how the Dicey Tech
@@ -33,7 +32,7 @@ class Vpc(ComponentResource):
         :type opts: Optional[ResourceOptions]
         """
         self.name = name
-        super().__init__("educate:infrastruture:aws:VPC", self.name)
+        super().__init__("diceytech:infrastruture:aws:VPC", f"{self.name}-vpc")
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "True"}
         self.vpc = ec2.Vpc(f"{self.name}-vpc", cidr_block="10.0.0.0/16")
@@ -63,7 +62,6 @@ class Vpc(ComponentResource):
         # TODO make subnet cird programmatically defined
         for zone in zones:
             self.create_subnet_pair(zone)
-
 
     def get_id(self):
         return self.vpc.id
@@ -98,7 +96,7 @@ class Vpc(ComponentResource):
             assign_ipv6_address_on_creation=False,
             vpc_id=self.vpc.id,
             map_public_ip_on_launch=False,
-            cidr_block="10.0.1.0/24",
+            cidr_block="10.0.2.0/24",
             availability_zone=zone,
             tags=self.tags,
         )
@@ -110,14 +108,14 @@ class Vpc(ComponentResource):
             allocation_id=eip.id,
             tags=self.tags,
         )
-        
+
         private_rt = ec2.RouteTable(
             f"pulumi-private-rt-{zone}",
             vpc_id=self.vpc.id,
             routes=[{"cidr_block": "0.0.0.0/0", "gateway_id": nat_gateway.id}],
             tags=self.tags,
         )
-        
+
         ec2.RouteTableAssociation(
             f"{self.name}-private-rta-{zone}",
             route_table_id=private_rt.id,
@@ -125,4 +123,3 @@ class Vpc(ComponentResource):
         )
 
         self.private_subnet_ids.append(private_subnet.id)
-    

@@ -6,9 +6,9 @@
 import pulumi
 from pulumi_aws import GetAmiFilterArgs, ec2, get_ami, get_availability_zones
 
-from vpc import Vpc
+from vpc import DTVpc
 
-apps_vpc = Vpc(name="educate-app", az_count=1)
+apps_vpc = DTVpc(name="educate-app", az_count=1)
 
 pulumi.export("vpc_id", apps_vpc.get_id())
 pulumi.export("public_subnet_ids", apps_vpc.get_public_subnet_id())
