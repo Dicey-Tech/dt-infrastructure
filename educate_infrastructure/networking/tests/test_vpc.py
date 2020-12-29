@@ -20,6 +20,7 @@ class TestAppsVpc(object):
 
         return pulumi.Output.all(self.test_vpc.name).apply(check_name)
 
+    # TODO Create Base Class https://github.com/mitodl/ol-infrastructure/blob/87021e2a8681c769354c1b227328433adaa1af15/src/ol_infrastructure/lib/ol_types.py#L45
     @pulumi.runtime.test
     def test_vpc_has_required_tags(self):
         def check_tags(args):
