@@ -39,6 +39,7 @@ class DTEc2(ComponentResource):
         :type String
         """
         self.name = name
+        self.tags = {"pulumi_managed": "true"}
         super().__init__("diceytech:infrastructure:aws:EC2", f"{self.name}-instance")
 
         self.size = "t2.micro"
@@ -72,28 +73,27 @@ class DTEc2(ComponentResource):
                 ),
                 ec2.SecurityGroupIngressArgs(
                     protocol="tcp",
-                    from_port=22,
-                    to_port=22,
+                    from_port=18000,
+                    to_port=18999,
                     cidr_blocks=["0.0.0.0/0"],
                 ),
             ],
         )
+        # TODO Smells bad....
+        with open("config.sh") as f:
+            self.user_data = f.read()
 
-        self.user_data = """
-        #!/bin/bash
-        echo "Hello, World!" > index.html
-        nohup python -m SimpleHTTPServer 80 &
-        """
-
-        self.server = ec2.Instance(
+        self._instance = ec2.Instance(
             f"{self.name}-instance",
             instance_type=self.size,
             subnet_id=app_subnet_id,
             vpc_security_group_ids=[self.group.id],
             user_data=self.user_data,
             ami="ami-0a76049070d0f8861",
-            key_name="second_try",
             iam_instance_profile=iam_instance_profile,
+            root_block_device=ec2.InstanceRootBlockDeviceArgs(
+                delete_on_termination=True, volume_size=50
+            ),
         )
 
     def get_public_ip(self):

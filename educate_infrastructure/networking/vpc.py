@@ -34,8 +34,8 @@ class DTVpc(ComponentResource):
         self.name = name
         super().__init__("diceytech:infrastruture:aws:VPC", f"{self.name}-vpc")
 
-        self.tags = {"pulumi_managed": "true", "AutoOff": "True"}
-        self.vpc = ec2.Vpc(f"{self.name}-vpc", cidr_block="10.0.0.0/16")
+        self.tags = {"pulumi_managed": "true", "AutoOff": "False"}
+        self.vpc = ec2.Vpc(f"{self.name}-vpc", cidr_block="10.0.0.0/16", tags=self.tags)
 
         self.igw = ec2.InternetGateway(f"{self.name}-igw", vpc_id=self.vpc.id)
 
