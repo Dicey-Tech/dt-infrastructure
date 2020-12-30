@@ -21,6 +21,7 @@ class PulumiMock(pulumi.runtime.Mocks):
             }
         if token == "aws:ec2/vpc:Vpc":
             outputs = {**inputs, "tags": {"name": "Boosie"}}
+
         return [name + "_id", outputs]
 
 

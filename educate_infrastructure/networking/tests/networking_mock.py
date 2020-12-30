@@ -15,7 +15,7 @@ class PulumiMock(pulumi.runtime.Mocks):
     def new_resource(self, token, name, inputs, provider, id_):
         outputs = inputs
         if token == "aws:ec2/vpc:Vpc":
-            outputs = {"tags": {"name": "Boosie"}}
+            outputs = inputs
         return [name + "_id", outputs]
 
 

@@ -24,13 +24,11 @@ class TestAppsVpc(object):
     @pulumi.runtime.test
     def test_vpc_has_required_tags(self):
         def check_tags(args):
-            urn, tags = args
+            tags = args[0]
             assert tags is not None
             assert "pulumi_managed" in tags
 
-        return pulumi.Output.all(self.test_vpc.urn, self.test_vpc.tags).apply(
-            check_tags
-        )
+        return pulumi.Output.all(self.test_vpc.tags).apply(check_tags)
 
     @pulumi.runtime.test
     def test_vpc_has_public_subnet(self):

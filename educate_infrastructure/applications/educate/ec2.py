@@ -8,9 +8,24 @@ This includes:
 - TODO  Create a route table and associate the created subnets with it
 - TODO Create a routing table to include the relevant peers and their networks
 """
+from enum import Enum, unique
 
 from pulumi import ComponentResource
-from pulumi_aws import ec2, get_ami, GetAmiFilterArgs
+from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
+
+
+@unique
+class InstanceType(str, Enum):
+    small = "t3a.small"
+    medium = "t3a.medium"
+    large = "t3a.large"
+    general_purpose_large = "m5a.large"
+    general_purpose_xlarge = "m5a.xlarge"
+    high_mem_regular = "r5a.large"
+    high_mem_xlarge = "r5a.xlarge"
+
+    def __str__(self) -> str:
+        return str.__str__(self)
 
 
 # TODO Make the SecurityGroup an input parameter
@@ -42,7 +57,7 @@ class DTEc2(ComponentResource):
         self.tags = {"pulumi_managed": "true"}
         super().__init__("diceytech:infrastructure:aws:EC2", f"{self.name}-instance")
 
-        self.size = "t2.micro"
+        self.size = "t2.large"
 
         # Ubuntu 20.04 LTS - Focal
         self.ami = get_ami(
@@ -51,7 +66,7 @@ class DTEc2(ComponentResource):
             filters=[GetAmiFilterArgs(name="name", values=["amzn-ami-hvm-*"])],
         )
 
-        # TODO Abstract SecurityGroup
+        # TODO Abstract SecurityGroup (same needed for elb)
         self.group = ec2.SecurityGroup(
             f"{self.name}-sg",
             vpc_id=app_vpc_id,
@@ -78,7 +93,9 @@ class DTEc2(ComponentResource):
                     cidr_blocks=["0.0.0.0/0"],
                 ),
             ],
+            tags=self.tags,
         )
+
         # TODO Smells bad....
         with open("config.sh") as f:
             self.user_data = f.read()
@@ -94,10 +111,14 @@ class DTEc2(ComponentResource):
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
                 delete_on_termination=True, volume_size=50
             ),
+            tags={**self.tags, "Name": f"{self.name}"},
         )
 
     def get_public_ip(self):
-        return self.server.public_ip
+        return self._instance.public_ip
 
     def get_public_dns(self):
-        return self.server.public_dns
+        return self._instance.public_dns
+
+    def get_instance_id(self):
+        return self._instance.id
