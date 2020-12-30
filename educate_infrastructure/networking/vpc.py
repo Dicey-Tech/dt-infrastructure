@@ -60,25 +60,36 @@ class DTVpc(ComponentResource):
         zones = get_availability_zones().names[:az_count]
 
         # TODO make subnet cird programmatically defined
-        for zone in zones:
-            self.create_subnet_pair(zone)
+        public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+        private_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+
+        for zone, public_subnet_cidr, private_subnet_cidr in zip(
+            zones, public_subnet_cidrs, private_subnet_cidrs
+        ):
+            self.create_subnet_pair(
+                zone,
+                public_subnet_cidr,
+                private_subnet_cidr,
+            )
 
     def get_id(self):
         return self.vpc.id
 
-    def get_public_subnet_id(self):
-        return self.public_subnet_ids[0]
+    def get_public_subnet_ids(self):
+        return self.public_subnet_ids
 
-    def get_private_subnet_id(self):
-        return self.private_subnet_ids[0]
+    def get_private_subnet_ids(self):
+        return self.private_subnet_ids
 
-    def create_subnet_pair(self, zone: str):
+    def create_subnet_pair(
+        self, zone: str, public_subnet_cidr: str, private_subnet_cidr: str
+    ):
         public_subnet = ec2.Subnet(
             f"{self.name}-public-subnet-{zone}",
             assign_ipv6_address_on_creation=False,
             vpc_id=self.vpc.id,
             map_public_ip_on_launch=True,
-            cidr_block="10.0.1.0/24",
+            cidr_block=public_subnet_cidr,
             availability_zone=zone,
             tags=self.tags,
         )
@@ -96,7 +107,7 @@ class DTVpc(ComponentResource):
             assign_ipv6_address_on_creation=False,
             vpc_id=self.vpc.id,
             map_public_ip_on_launch=False,
-            cidr_block="10.0.2.0/24",
+            cidr_block=private_subnet_cidr,
             availability_zone=zone,
             tags=self.tags,
         )

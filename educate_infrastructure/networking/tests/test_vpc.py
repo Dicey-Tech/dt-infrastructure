@@ -10,7 +10,8 @@ class TestAppsVpc(object):
 
     def setup(self):
         self.name = "educate-app-vpc"
-        self.test_vpc = DTVpc(name=self.name, az_count=1)
+        self.az_count = 2
+        self.test_vpc = DTVpc(name=self.name, az_count=self.az_count)
 
     @pulumi.runtime.test
     def test_vpc_created(self):
@@ -33,19 +34,19 @@ class TestAppsVpc(object):
     @pulumi.runtime.test
     def test_vpc_has_public_subnet(self):
         def check_public_subnet(args):
-            public_subnet_id = args[0]
-            assert public_subnet_id != ""
+            public_subnet_ids = args[0]
+            assert len(public_subnet_ids) == self.az_count
 
-        return pulumi.Output.all(self.test_vpc.get_public_subnet_id()).apply(
+        return pulumi.Output.all(self.test_vpc.get_public_subnet_ids()).apply(
             check_public_subnet
         )
 
     @pulumi.runtime.test
     def test_vpc_has_private_subnet(self):
         def check_private_subnet(args):
-            private_subnet_id = args[0]
-            assert private_subnet_id != ""
+            private_subnet_ids = args[0]
+            assert len(private_subnet_ids) == self.az_count
 
-        return pulumi.Output.all(self.test_vpc.get_private_subnet_id()).apply(
+        return pulumi.Output.all(self.test_vpc.get_private_subnet_ids()).apply(
             check_private_subnet
         )
