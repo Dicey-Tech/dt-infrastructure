@@ -55,7 +55,7 @@ educate_app_profile = iam.InstanceProfile(
 
 
 educate_app_instance = DTEc2(
-    "educate-app", apps_vpc_id, apps_private_subnet_ids[0], educate_app_profile.id
+    "educate-app", apps_vpc_id, apps_public_subnet_ids[0], educate_app_profile.id
 )
 
 # TODO Create a load balancer to listen for HTTP traffic on port 80 and 443.
@@ -112,9 +112,23 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
     port=80,
 )
 
-# TODO Route 53 to alb
+# TODO Move Route53 setup to its own project
 # https://www.pulumi.com/docs/reference/pkg/aws/route53/record/#alias-record
-# url = route53.Record()
+zone = route53.get_zone(name="3ducate.co.uk")
+alias = route53.RecordAliasArgs(
+        name=educate_app_alb.dns_name,
+        zone_id=educate_app_alb.zone_id,
+        evaluate_target_health=True,
+    )
+
+record = route53.Record(
+    "educate-app-record",
+    zone_id=zone.zone_id,
+    name=f"studio.prod.{zone.name}",
+    type="A",
+    aliases=[alias]
+)
+# record = route53.Record.get(resource_name="studio.prod.3ducate.co.uk", id="Z3IBKAQH9QPEYP_studio.prod.3ducate.co.uk_A") 
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)
