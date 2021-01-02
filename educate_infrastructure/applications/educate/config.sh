@@ -18,7 +18,9 @@ cd ~
 
 #TODO get config from s3
 export PUBLIC_IP=$(curl ifconfig.me)
-echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
+#echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
+echo -e "EDXAPP_LMS_BASE: qa.3ducate.co.uk\nEDXAPP_CMS_BASE: studio.qa.3ducate.co.uk" > config.yml
+
 
 # Install open edX
 # TODO find a better to run install

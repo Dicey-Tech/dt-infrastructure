@@ -121,7 +121,7 @@ class DTVpc(ComponentResource):
         )
 
         private_rt = ec2.RouteTable(
-            f"pulumi-private-rt-{zone}",
+            f"{self.name}-rt-{zone}",
             vpc_id=self.vpc.id,
             routes=[{"cidr_block": "0.0.0.0/0", "gateway_id": nat_gateway.id}],
             tags=self.tags,
