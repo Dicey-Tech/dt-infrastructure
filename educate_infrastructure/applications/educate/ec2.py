@@ -8,7 +8,9 @@ This includes:
 - TODO  Create a route table and associate the created subnets with it
 - TODO Create a routing table to include the relevant peers and their networks
 """
+# TODO Abstract Security Group so that there is no need to create a SG per instance
 from enum import Enum, unique
+from typing import List, Text
 
 from pulumi import ComponentResource
 from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
@@ -122,3 +124,20 @@ class DTEc2(ComponentResource):
 
     def get_instance_id(self):
         return self._instance.id
+
+    @staticmethod
+    def get_required_records(env: str) -> List[str]:
+        if env == "dev":
+            return ["discovery", "preview", "studio"]
+        else:
+            return [
+                "blockstore",
+                "credentials",
+                "discovery",
+                "forum",
+                "insights",
+                "notes",
+                "preview",
+                "shop",
+                "studio",
+            ]

@@ -6,7 +6,7 @@ from pulumi_aws import ebs, ec2, s3, get_ami, GetAmiFilterArgs, iam, lb, route53
 from ec2 import DTEc2
 
 env = get_stack()
-networking_stack = StackReference(f"BbrSofiane/networking/{env}")
+networking_stack = StackReference(f"BbrSofiane/networking/prod")
 
 apps_vpc_id = networking_stack.get_output("vpc_id")
 apps_public_subnet_ids = networking_stack.get_output("public_subnet_ids")
@@ -50,12 +50,14 @@ s3_role_policy_attach = iam.RolePolicyAttachment(
 )
 
 educate_app_profile = iam.InstanceProfile(
-    "educate-app-profile", role=educate_app_role.name
+    f"educate-app-profile", role=educate_app_role.name
 )
 
-
 educate_app_instance = DTEc2(
-    "educate-app", apps_vpc_id, apps_public_subnet_ids[0], educate_app_profile.id
+    f"educate-app-{env}",
+    apps_vpc_id,
+    apps_private_subnet_ids[0],
+    educate_app_profile.id,
 )
 
 # TODO Create a load balancer to listen for HTTP traffic on port 80 and 443.
@@ -83,7 +85,7 @@ sgroup = ec2.SecurityGroup(
 
 # TODO Add enable_deletion_protection=True, access_logs
 educate_app_alb = lb.LoadBalancer(
-    "educate-app-alb",
+    f"educate-app-alb-{env}",
     load_balancer_type="application",
     security_groups=[sgroup.id],
     subnets=apps_public_subnet_ids,
@@ -91,7 +93,7 @@ educate_app_alb = lb.LoadBalancer(
 )
 
 educate_app_tg = lb.TargetGroup(
-    "educate-app-tg",
+    f"educate-app-tg-{env}",
     port=80,
     protocol="HTTP",
     vpc_id=apps_vpc_id,
@@ -99,14 +101,14 @@ educate_app_tg = lb.TargetGroup(
 )
 
 lb_listener = lb.Listener(
-    "educate-app-listener",
+    f"educate-app-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=80,
     default_actions=[{"type": "forward", "target_group_arn": educate_app_tg.arn}],
 )
 
 educate_target_group_attachment = lb.TargetGroupAttachment(
-    "educate-app-tg-attachement",
+    f"educate-app-tg-attachement-{env}",
     target_group_arn=educate_app_tg.arn,
     target_id=educate_app_instance.get_instance_id(),
     port=80,
@@ -115,20 +117,52 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
 # TODO Move Route53 setup to its own project
 # https://www.pulumi.com/docs/reference/pkg/aws/route53/record/#alias-record
 zone = route53.get_zone(name="3ducate.co.uk")
+records_required = DTEc2.get_required_records(env)
+records = []
+
 alias = route53.RecordAliasArgs(
-        name=educate_app_alb.dns_name,
-        zone_id=educate_app_alb.zone_id,
-        evaluate_target_health=True,
+    name=educate_app_alb.dns_name,
+    zone_id=educate_app_alb.zone_id,
+    evaluate_target_health=True,
+)
+
+if env == "prod":
+    record_lms = route53.Record(
+        f"educate-app-record-lms-{env}",
+        zone_id=zone.zone_id,
+        name=f"{zone.name}",
+        type="A",
+        aliases=[alias],
     )
 
-record = route53.Record(
-    "educate-app-record",
-    zone_id=zone.zone_id,
-    name=f"studio.prod.{zone.name}",
-    type="A",
-    aliases=[alias]
-)
-# record = route53.Record.get(resource_name="studio.prod.3ducate.co.uk", id="Z3IBKAQH9QPEYP_studio.prod.3ducate.co.uk_A") 
+    for record in records_required:
+        add_record = route53.Record(
+            f"educate-app-record-{record}-{env}",
+            zone_id=zone.zone_id,
+            name=f"{record}.{zone.name}",
+            type="A",
+            aliases=[alias],
+        )
+        records.append(add_record)
+else:
+    record_lms = route53.Record(
+        f"educate-app-record-lms-{env}",
+        zone_id=zone.zone_id,
+        name=f"{env}.{zone.name}",
+        type="A",
+        aliases=[alias],
+    )
+
+    for record in records_required:
+        add_record = route53.Record(
+            f"educate-app-record-{record}-{env}",
+            zone_id=zone.zone_id,
+            name=f"{record}.{env}.{zone.name}",
+            type="A",
+            aliases=[alias],
+        )
+        records.append(add_record)
+# record = route53.Record.get(resource_name="studio.prod.3ducate.co.uk", id="Z3IBKAQH9QPEYP_studio.prod.3ducate.co.uk_A")
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)
