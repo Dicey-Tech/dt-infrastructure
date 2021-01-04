@@ -12,8 +12,10 @@ apps_vpc_id = networking_stack.get_output("vpc_id")
 apps_public_subnet_ids = networking_stack.get_output("public_subnet_ids")
 apps_private_subnet_ids = networking_stack.get_output("public_private_ids")
 
+# TODO Add resource dependencies opts=pulumi.ResourceOptions(depends_on=[server])
+
 tags = {
-    "Name": "Educate App",
+    "Name": f"Educate App - {env}",
     "pulumi_managed": "true",
 }
 
@@ -80,6 +82,12 @@ sgroup = ec2.SecurityGroup(
             to_port=80,
             cidr_blocks=["0.0.0.0/0"],
         ),
+        ec2.SecurityGroupIngressArgs(
+            protocol="tcp",
+            from_port=443,
+            to_port=443,
+            cidr_blocks=["0.0.0.0/0"],
+        ),
     ],
 )
 
@@ -100,10 +108,29 @@ educate_app_tg = lb.TargetGroup(
     tags=tags,
 )
 
-lb_listener = lb.Listener(
-    f"educate-app-listener-{env}",
+http_lb_listener = lb.Listener(
+    f"educate-app-http-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=80,
+    default_actions=[
+        lb.ListenerDefaultActionArgs(
+            type="redirect",
+            redirect=lb.ListenerDefaultActionRedirectArgs(
+                port="443",
+                protocol="HTTPS",
+                status_code="HTTP_301",
+            ),
+        )
+    ],
+)
+
+https_lb_listener = lb.Listener(
+    f"educate-app-https-listener-{env}",
+    load_balancer_arn=educate_app_alb.arn,
+    port=443,
+    protocol="HTTPS",
+    ssl_policy="ELBSecurityPolicy-2016-08",
+    certificate_arn="arn:aws:acm:eu-west-2:198538058567:certificate/4e597971-7430-44a7-b559-190c3ac7523d",
     default_actions=[{"type": "forward", "target_group_arn": educate_app_tg.arn}],
 )
 
