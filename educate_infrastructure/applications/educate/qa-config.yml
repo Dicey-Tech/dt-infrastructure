@@ -1,0 +1,226 @@
+MYSQL_HOST: localhost #"educate-sql-db.cxsqav3zlyct.eu-west-2.rds.amazonaws.com"
+MONGO_HOSTS: localhost #"ip-172-31-72-234.eu-west-2.compute.internal"
+
+NGINX_SET_X_FORWARDED_HEADERS: false
+ecommerce_create_demo_data: false
+credentials_create_demo_data: false
+SANDBOX_ENABLE_ANALYTICS_API: false
+SANDBOX_ENABLE_INSIGHTS: false
+SANDBOX_ENABLE_BLOCKSTORE: false
+SANDBOX_ENABLE_NOTES: false
+DEMO_ROLE_ENABLED: false
+
+# edx_django_service_default_db_host: "{{ MYSQL_HOST }}"
+
+PLATFORM_NAME: "ƎDUCATE"
+STORAGE_CLASS: "storages.backends.s3boto.S3BotoStorage"
+
+# AWS
+AWS_S3_LOGS_NOTIFY_EMAIL: support@diceytech.co.uk
+AWS_S3_LOGS_FROM_EMAIL: support@diceytech.co.uk
+AWS_SES_REGION_NAME: "eu-west-2"
+AWS_SES_REGION_ENDPOINT: "email.eu-west-2.amazonaws.com"
+
+# edxapp
+EDXAPP_LMS_BASE: "qa.3ducate.co.uk"
+EDXAPP_CMS_BASE: "studio.{{ EDXAPP_LMS_BASE }}"
+EDXAPP_PREVIEW_LMS_BASE: "preview.qa.3ducate.co.uk"
+EDXAPP_LMS_BASE_SCHEME: https
+EDXAPP_PLATFORM_NAME: "{{ PLATFORM_NAME }}"
+EDXAPP_PLATFORM_DESCRIPTION: "The Home of Project-Based Learning"
+EDXAPP_STUDIO_NAME: "{{ PLATFORM_NAME }} Studio"
+EDXAPP_TIME_ZONE: Europe/London
+EDXAPP_MYSQL_HOST: "{{ MYSQL_HOST }}"
+EDXAPP_MONGO_HOSTS: "{{ MONGO_HOSTS}}"
+EDXAPP_EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+EDXAPP_EMAIL_HOST: email-smtp.eu-west-1.amazonaws.com
+EDXAPP_EMAIL_PORT: 587
+EDXAPP_EMAIL_USE_TLS: true
+EDXAPP_EMAIL_HOST_USER: BLPaRaeBvkJ9KAFgF+w2+Efo6lhwaTkTU06bxu2JC7cE
+EDXAPP_EMAIL_HOST_PASSWORD: AKIAS4OOKLND55VLKEOH
+EDXAPP_ENABLE_EDXNOTES: true
+EDXAPP_AWS_SES_REGION_NAME: "{{ AWS_SES_REGION_NAME }}"
+EDXAPP_AWS_SES_REGION_ENDPOINT: "{{ AWS_SES_REGION_ENDPOINT }}"
+EDXAPP_SITE_NAME: "qa.3ducate.co.uk"
+EDXAPP_CMS_SITE_NAME: "studio.qa.3ducate.co.uk"
+
+# Needed for backpack 
+EDXAPP_LEARNING_MICROFRONTEND_URL: "https://profile.qa.3ducate.co.uk"
+
+EDXAPP_SESSION_COOKIE_SECURE: true
+EDXAPP_SESSION_COOKIE_DOMAIN: ".qa.3ducate.co.uk"
+EDXAPP_CSRF_COOKIE_SECURE: true  
+EDXAPP_ENABLE_OAUTH2_PROVIDER: true
+EDXAPP_LOGIN_REDIRECT_WHITELIST: [
+    "{{ EDXAPP_CMS_BASE }}",
+    "{{ EDXAPP_CMS_BASE }}",
+]
+
+EDXAPP_SOCIAL_AUTH_OAUTH_SECRETS:
+- azuread-oauth2: "VFx2Ni-IUsuM1miuP0jR~bgTz2--0~Wrb-"
+- google-oauth2: "LFVeePlnHUw4_BF0KBWcwRLP"
+
+EDXAPP_COURSE_CATALOG_VISIBILITY_PERMISSION: "see_in_catalog"
+EDXAPP_DEFAULT_COURSE_VISIBILITY_IN_CATALOG: "none"
+
+EDXAPP_AWS_S3_CUSTOM_DOMAIN: "s3.eu-west-1.amazonaws.com/3ducate-preprod2"
+EDXAPP_AWS_STORAGE_BUCKET_NAME: "3ducate-preprod2"
+EDXAPP_FINANCIAL_REPORTS:
+  BUCKET: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+  ROOT_PATH: "financial_reports/"
+  STORAGE_TYPE: "s3"
+
+EDXAPP_GRADE_STORAGE_CLASS: "{{ STORAGE_CLASS }}"
+EDXAPP_GRADE_BUCKET: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+EDXAPP_GRADE_STORAGE_TYPE: "s3"
+EDXAPP_GRADE_ROOT_PATH: "grades_download"
+EDXAPP_GRADE_STORAGE_KWARGS:
+  location: "grades_download/"
+  bucket: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+  gzip: true
+  
+EDXAPP_PROFILE_IMAGE_BACKEND_CONFIG:
+  class: "{{ STORAGE_CLASS }}"
+  options:
+    location: "profile-images/"  # Note: The location should not begin with a leading slash.
+    bucket: "{{ EDXAPP_AWS_S3_CUSTOM_DOMAIN }}"
+  custom_domain: "{{ EDXAPP_AWS_S3_CUSTOM_DOMAIN }}"
+  headers:
+    Cache-Control: "max-age-{{ EDXAPP_PROFILE_IMAGE_MAX_AGE }}"
+
+EDXAPP_VIDEO_IMAGE_SETTINGS:
+  VIDEO_IMAGE_MAX_BYTES : 2097152
+  VIDEO_IMAGE_MIN_BYTES : 2048
+  STORAGE_CLASS: "{{ STORAGE_CLASS }}"
+  STORAGE_KWARGS:
+    location: "video-images/"
+    bucket: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+    custom_domain: "{{ EDXAPP_AWS_S3_CUSTOM_DOMAIN }}"
+  DIRECTORY_PREFIX: "video-images/"
+  
+VIDEO_TRANSCRIPTS_SETTINGS:
+  VIDEO_TRANSCRIPTS_MAX_BYTES : 3145728
+  STORAGE_KWARGS:
+    location: "video-transcripts/"
+    bucket: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+    custom_domain: "{{ EDXAPP_AWS_S3_CUSTOM_DOMAIN }}"
+  DIRECTORY_PREFIX: "video-transcripts/"
+
+# Video Pipeline Settings
+EDXAPP_VIDEO_UPLOAD_PIPELINE:
+  BUCKET: "{{ EDXAPP_AWS_STORAGE_BUCKET_NAME }}"
+  ROOT_PATH: "video"
+
+EDXAPP_EDXNOTES_PUBLIC_API: "https://notes.{{ EDXAPP_LMS_BASE }}/api/v1"
+EDXAPP_EDXNOTES_INTERNAL_API: "https://notes.{{ EDXAPP_LMS_BASE }}/api/v1"
+
+EDXAPP_TECH_SUPPORT_EMAIL: "technical@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_API_ACCESS_FROM_EMAIL: "api-requests@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_API_ACCESS_MANAGER_EMAIL: "api-access@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_CONTACT_EMAIL: "info@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_BUGS_EMAIL: "bugs@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_DEFAULT_FROM_EMAIL: "registration@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_DEFAULT_FEEDBACK_EMAIL: "feedback@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_DEFAULT_SERVER_EMAIL: "devops@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_BULK_EMAIL_DEFAULT_FROM_EMAIL: "no-reply@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_BULK_EMAIL_LOG_SENT_EMAILS: false
+EDXAPP_UNIVERSITY_EMAIL: "university@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_PAYMENT_SUPPORT_EMAIL: "billing@{{ EDXAPP_LMS_BASE }}"
+EDXAPP_PRESS_EMAIL: "press@{{ EDXAPP_LMS_BASE }}"
+
+EDXAPP_ZENDESK_URL: "https://diceytech.zendesk.com"
+EDXAPP_ZENDESK_OAUTH_ACCESS_TOKEN: "d35ad8cf2ccceed2252106e1a7a9de08dae0014b7879c94b59e2ba5cf2ff5a73"
+
+EDXAPP_CMS_SEGMENT_KEY: "JUG1YyGGzCrfY9rukp3N7zOnVOIlzIBv"
+EDXAPP_LMS_SEGMENT_KEY: "JUG1YyGGzCrfY9rukp3N7zOnVOIlzIBv"
+
+EDXAPP_ENV_EXTRA: 
+  COURSE_MODE_DEFAULTS:
+      name: 'Honor'
+      slug: 'honor'
+      bulk_sku: null
+      currency: 'gbp'
+      description: null
+      expiration_datetime: null
+      min_price: 0
+      sku: None
+      suggested_prices: ''
+
+# Discovery
+DISCOVERY_PLATFORM_NAME: "{{ PLATFORM_NAME }}"
+DISCOVERY_URL_ROOT: "https://discovery.{{ EDXAPP_LMS_BASE }}"
+DISCOVERY_MYSQL: "{{ MYSQL_HOST }}"
+DISCOVERY_MYSQL_REPLICA_HOST: "{{ MYSQL_HOST }}"
+DISCOVERY_URL_ROOT: "https://discovery.{{ EDXAPP_LMS_BASE }}"
+DISCOVERY_AWS_SES_REGION_NAME:  "{{ AWS_SES_REGION_NAME }}"
+DISCOVERY_AWS_SES_REGION_ENDPOINT: "{{ AWS_SES_REGION_ENDPOINT }}"
+
+# ecommerce
+ECOMMERCE_DATABASE_HOST: "{{ MYSQL_HOST }}"
+ECOMMERCE_ECOMMERCE_URL_ROOT: "https://shop.{{ EDXAPP_LMS_BASE }}"
+ECOMMERCE_LMS_URL_ROOT: "{{ COMMON_LMS_BASE_URL }}"
+ECOMMERCE_PLATFORM_NAME: "{{ PLATFORM_NAME }}"
+ECOMMERCE_DISCOVERY_SERVICE_URL: "{{ DISCOVERY_URL_ROOT }}"
+
+# ecommerce worker
+ECOMMERCE_WORKER_ECOMMERCE_API_ROOT: "{{ ECOMMERCE_ECOMMERCE_URL_ROOT }}/api/v2/"
+
+# edx_notes_api
+EDX_NOTES_API_MYSQL_HOST: "{{ MYSQL_HOST }}"
+EDX_NOTES_API_MYSQL_DB_PASS: "ury%aBAMcPBe*AgD950*!e6v"
+EDX_NOTES_API_ALLOWED_HOSTS: 
+  - localhost
+  - qa.3ducate.co.uk
+  - studio.qa.3ducate.co.uk  
+EDX_NOTES_API_ELASTICSEARCH_URL: "localhost:9200"
+EDX_NOTES_API_DATASTORE_NAME: "notes"
+EDX_NOTES_API_SECRET_KEY: "@2tdjEzqJgKmqDbMZ7sz6Va9!2JFT5A52E!bRE&B$J9PasyA9v"
+EDX_NOTES_API_CLIENT_ID: "notes"
+EDX_NOTES_API_CLIENT_SECRET: "FIK5MjhrNvFxux5lVjg2SbKUkx8jZ99PvyGZvlL6F2VsnFQ1MNn6pThfUAbxJOXdPSu3Lxc3QW2tU2G6vToyVEL7yb9KJHFuNdWcB7JO2p6suRiZLhe2tDDXDpBN68Ai"
+
+
+# Forum
+FORUM_MONGO_HOSTS: "{{ MONGO_HOSTS}}"
+
+# notifier
+NOTIFIER_LMS_URL_BASE:  "https://{{ EDXAPP_LMS_BASE }}"
+    
+# xqueue
+XQUEUE_MYSQL_HOST: "{{ MYSQL_HOST }}"
+
+# certs
+CERTS_S3_UPLOAD: true
+#CERTS_URL: "http://localhost:{{ CERTS_NGINX_PORT }}"
+#CERTS_DOWNLOAD_URL: "http://localhost:{{ CERTS_NGINX_PORT }}"
+#CERTS_VERIFY_URL: "http://localhost:{{ CERTS_NGINX_PORT }}"
+
+# Insights
+INSIGHTS_DATABASE_HOST: "{{ MYSQL_HOST }}"
+INSIGHTS_LMS_BASE: "{{ EDXAPP_LMS_BASE }}"
+INSIGHTS_CMS_BASE: "{{ EDXAPP_CMS_BASE}}"
+INSIGHTS_BASE_URL: "https://insights.3ducate.co.uk"
+
+# analytics_api
+ANALYTICS_API_DEFAULT_HOST: "{{ MYSQL_HOST }}"
+ANALYTICS_API_REPORTS_HOST: "{{ MYSQL_HOST }}"
+ANALYTICS_API_BASE_URL: "https://analytics-api.{{ EDXAPP_LMS_BASE }}"
+ANALYTICS_API_DEFAULT_PASSWORD: "FzVUfKy09vvpkSqBxE7hS6o8"
+ANALYTICS_API_REPORTS_PASSWORD: "syS1JJaXP3vL3h2a2jUdwiJd"
+
+# Example settings to use Amazon S3 as a storage backend for course reports.
+#
+# This storage mechanism also provides support for pre-authenticated URLs with an expiry time,
+# allowing temporary report downloads from secured S3 file locations.
+#
+# ANALYTICS_API_REPORT_DOWNLOAD_BACKEND:
+#   DEFAULT_FILE_STORAGE: "storages.backends.s3boto.S3BotoStorage"
+#   AWS_STORAGE_BUCKET_NAME: "report-download-bucket"
+#   COURSE_REPORT_FILE_LOCATION_TEMPLATE: "/{course_id}_{report_name}.csv"
+#   COURSE_REPORT_DOWNLOAD_EXPIRY_TIME: 120
+#
+# By default, instead we use the local filesystem.
+#
+# Other storage providers can be used, as long as they provide the .url() method.
+
+# blockstore
+# BLOCKSTORE_DATABASE_HOST: {{ MYSQL_HOST }}

@@ -19,8 +19,8 @@ cd ~
 #TODO get config from s3
 export PUBLIC_IP=$(curl ifconfig.me)
 #echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
-echo -e "EDXAPP_LMS_BASE: qa.3ducate.co.uk\nEDXAPP_CMS_BASE: studio.qa.3ducate.co.uk" > config.yml
-
+#echo -e "EDXAPP_LMS_BASE: qa.3ducate.co.uk\nEDXAPP_CMS_BASE: studio.qa.3ducate.co.uk" > config.yml
+aws s3 cp s3://3ducate-config/qa-config.yml config.yml
 
 # Install open edX
 # TODO find a better to run install
@@ -29,5 +29,6 @@ chmod +x edx.platform-install.sh
 sudo nohup ./edx.platform-install.sh &
 
 # versions.py - Script to list versions of core elements of open edx
-wget https://gist.github.com/fdns/8032710eceea0a2c63c1b4f0a5da8ec1
-# sudo ./version.py > versions.log
+wget https://gist.githubusercontent.com/fdns/8032710eceea0a2c63c1b4f0a5da8ec1/raw/29d0bfcc9d0152c9f57629598c02a73061a9c0cc/version.py
+chmod +x version.py
+sudo ./version.py > versions.log
