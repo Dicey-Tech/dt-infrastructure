@@ -1,17 +1,30 @@
+from ipaddress import IPv4Network
+
 import pulumi
 import pytest
 
-from educate_infrastructure.networking.tests import networking_mock
-from educate_infrastructure.networking.vpc import DTVpc
+from educate_infrastructure.infra.network.tests import networking_mock
+from educate_infrastructure.infra.network.vpc import DTVpc
 
-# TODO Improve test to verify that there az_count match the number of subnets
+
+class FakeIPv4Network(object):
+    def __init__(self):
+        pass
+
+
+# TODO test to verify that there az_count match the number of subnets
 class TestAppsVpc(object):
     """ Initial tests doing basic coverage """
 
     def setup(self):
         self.name = "educate-app-vpc"
         self.az_count = 2
-        self.test_vpc = DTVpc(name=self.name, az_count=self.az_count)
+
+        self.cidr_block = IPv4Network("172.255.100.0/16", False)
+
+        self.test_vpc = DTVpc(
+            name=self.name, az_count=self.az_count, cidr_block=self.cidr_block
+        )
 
     @pulumi.runtime.test
     def test_vpc_created(self):

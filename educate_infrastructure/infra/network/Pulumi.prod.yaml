@@ -1,12 +1,5 @@
 config:
   aws:region: eu-west-2
   apps_vpc:az_count: 1
-  apps_vpc:vpc_cidr: 172.255.0.0/16
-  apps_vpc:private_subnet_cidrs:
-    - 172.255.100.0/24
-    - 172.255.101.0/24
-    - 172.255.102.0/24
-  apps_vpc:public_subnet_cidrs:
-    - 172.255.110.0/24
-    - 172.255.111.0/24
-    - 172.255.112.0/24
+  apps_vpc:cidr_block: 10.12.0.0/16
+  db_vpc:cidr_block: 10.2.0.0/16
