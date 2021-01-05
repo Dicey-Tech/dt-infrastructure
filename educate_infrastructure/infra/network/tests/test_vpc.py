@@ -13,7 +13,7 @@ class FakeIPv4Network(object):
 
 
 # TODO test to verify that there az_count match the number of subnets
-class TestAppsVpc(object):
+class TestDTVpc(object):
     """ Initial tests doing basic coverage """
 
     def setup(self):
@@ -63,3 +63,10 @@ class TestAppsVpc(object):
         return pulumi.Output.all(self.test_vpc.get_private_subnet_ids()).apply(
             check_private_subnet
         )
+
+
+class TestDTVPCPeeringConnection(object):
+    # TODO
+    @pulumi.runtime.test
+    def test_has_required_tags(self):
+        pass

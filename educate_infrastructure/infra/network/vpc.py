@@ -180,13 +180,13 @@ class DTVPCPeeringConnection(ComponentResource):
             tags={"pulumi_managed": "True"},
         )
         self.source_to_dest_route = ec2.Route(
-            f"{source_vpc.vpc_config.vpc_name}-to-{destination_vpc.vpc_config.vpc_name}-route",
+            f"{source_vpc.name}-to-{destination_vpc.name}-route",
             route_table_id=source_vpc.public_route_table.id,
             destination_cidr_block=destination_vpc.vpc.cidr_block,
             vpc_peering_connection_id=self.peering_connection.id,
         )
         self.dest_to_source_route = ec2.Route(
-            f"{destination_vpc.vpc_config.vpc_name}-to-{source_vpc.vpc_config.vpc_name}-route",
+            f"{destination_vpc.name}-to-{source_vpc.name}-route",
             route_table_id=destination_vpc.public_route_table.id,
             destination_cidr_block=source_vpc.vpc.cidr_block,
             vpc_peering_connection_id=self.peering_connection.id,
