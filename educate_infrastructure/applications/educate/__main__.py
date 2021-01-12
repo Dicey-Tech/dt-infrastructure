@@ -6,11 +6,11 @@ from pulumi_aws import ebs, ec2, s3, get_ami, GetAmiFilterArgs, iam, lb, route53
 from ec2 import DTEc2
 
 env = get_stack()
-networking_stack = StackReference(f"BbrSofiane/networking/prod")
+networking_stack = StackReference("BbrSofiane/networking/prod")
 
 apps_vpc_id = networking_stack.get_output("vpc_id")
-apps_public_subnet_ids = networking_stack.get_output("public_subnet_ids")
-apps_private_subnet_ids = networking_stack.get_output("public_private_ids")
+apps_public_subnet_ids = networking_stack.get_output("apps_public_subnet_ids")
+apps_private_subnet_ids = networking_stack.get_output("apps_private_subnet_ids")
 
 # TODO Add resource dependencies opts=pulumi.ResourceOptions(depends_on=[server])
 
@@ -52,7 +52,7 @@ s3_role_policy_attach = iam.RolePolicyAttachment(
 )
 
 educate_app_profile = iam.InstanceProfile(
-    f"educate-app-profile", role=educate_app_role.name
+    "educate-app-profile", role=educate_app_role.name
 )
 
 educate_app_instance = DTEc2(
@@ -64,7 +64,7 @@ educate_app_instance = DTEc2(
 
 # TODO Create a load balancer to listen for HTTP traffic on port 80 and 443.
 sgroup = ec2.SecurityGroup(
-    f"educate-app-alb-sg",
+    "educate-app-alb-sg",
     vpc_id=apps_vpc_id,
     description="Enable HTTP access",
     egress=[
