@@ -3,6 +3,7 @@ from typing import Dict, Text
 
 from pydantic import BaseModel
 
+
 # https://github.com/mitodl/ol-infrastructure/blob/9cd2cfe20e6f731d2d46caf7fe4458daf53d6163/src/ol_infrastructure/lib/ol_types.py#L45
 class AWSBase(BaseModel):
     """Base class for deriving configuration objects to pass to AWS component resources."""

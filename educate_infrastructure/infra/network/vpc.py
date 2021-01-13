@@ -51,7 +51,10 @@ class DTVpc(ComponentResource):
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "False"}
         self.vpc = ec2.Vpc(
-            f"{self.name}-vpc", cidr_block=str(cidr_block), tags=self.tags
+            f"{self.name}-vpc",
+            cidr_block=str(cidr_block),
+            assign_generated_ipv6_cidr_block=True,
+            tags=self.tags,
         )
 
         self.igw = ec2.InternetGateway(f"{self.name}-igw", vpc_id=self.vpc.id)
@@ -79,13 +82,13 @@ class DTVpc(ComponentResource):
         if self.rds_network:
             for index, zone, subnet_v4 in subnet_iterator:
                 if index < az_count:
-                    self.create_subnet(zone, subnet_v4, is_public=True)
+                    self.create_subnet(zone, subnet_v4, is_public=False)
 
             self.db_subnet_group = rds.SubnetGroup(
                 f"{self.name}-db-subnet-group",
                 description=f"RDS subnet group for {self.name}",
                 name=f"{self.name}-db-subnet-group",
-                subnet_ids=[net_id for net_id in self.public_subnet_ids],
+                subnet_ids=[net_id for net_id in self.private_subnet_ids],
                 tags=self.tags,
             )
         else:
@@ -143,18 +146,32 @@ class DTVpc(ComponentResource):
 
                 self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
         else:
-            # TODO Is 1 NAT Gateway per private subnet required?
-            private_rt = ec2.RouteTable(
-                f"{name_pre}-rt-{zone}",
-                vpc_id=self.vpc.id,
-                routes=[
-                    {
-                        "cidr_block": "0.0.0.0/0",
-                        "gateway_id": self.nat_gateway_ids[f"{zone}"],
-                    }
-                ],
-                tags=self.tags,
-            )
+            if self.rds_network:
+                private_rt = ec2.RouteTable(
+                    f"{name_pre}-rt-{zone}",
+                    vpc_id=self.vpc.id,
+                    routes=[
+                        ec2.RouteTableRouteArgs(
+                            cidr_block="0.0.0.0/0",
+                            # egress_only_gateway_id=self.egress_igw.id,
+                            gateway_id=self.igw.id,
+                        )
+                    ],
+                    tags=self.tags,
+                )
+            else:
+                # TODO Is 1 NAT Gateway per private subnet required?
+                private_rt = ec2.RouteTable(
+                    f"{name_pre}-rt-{zone}",
+                    vpc_id=self.vpc.id,
+                    routes=[
+                        ec2.RouteTableRouteArgs(
+                            cidr_block="0.0.0.0/0",
+                            gateway_id=self.nat_gateway_ids[f"{zone}"],
+                        ),
+                    ],
+                    tags=self.tags,
+                )
 
             ec2.RouteTableAssociation(
                 f"{name_pre}-rta-{zone}",

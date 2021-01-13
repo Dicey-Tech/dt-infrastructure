@@ -37,7 +37,7 @@ mysql_db_config = DTMySQLConfig(
     security_groups=[mysql_db_sg],
     db_name="educate_db",
     tags={"pulumi_managed": "True"},
-    # snapshot_identifier="educate-sql-db-2-final-snapshot",
+    snapshot_identifier="educate-sql-db-2-final-snapshot",
 )
 
 mysql_db = DTRDSInstance(db_config=mysql_db_config)
