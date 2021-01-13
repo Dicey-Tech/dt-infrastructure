@@ -1,3 +1,7 @@
+dev.setup:
+	pip install requirement.txt
+	pre-commit install
+
 up:
 	docker-compose up -d 
 
@@ -11,27 +15,36 @@ pull:
 	docker pull pulumi/pulumi-python 
 	docker-compose build
 
-preview.networking:
-	pulumi preview -C educate_infrastructure/infra/network
-	#docker run --rm -ti -v ~/.pulumi:/root/.pulumi -v $(pwd):/pulumi/projects diceytech/pulumi cd networking && pulumi preview --stack prod -C educate_infrastructure/applications/educate
+preview.databases:
+	pulumi preview -C educate_infrastructure/databases
 
 preview.educate:
 	pulumi preview -C educate_infrastructure/applications/educate
 
-up.networking:
-	pulumi up -C educate_infrastructure/infra/network -y
+preview.networking:
+	pulumi preview -C educate_infrastructure/infra/network
+	#docker run --rm -ti -v ~/.pulumi:/root/.pulumi -v $(pwd):/pulumi/projects diceytech/pulumi cd networking && pulumi preview --stack prod -C educate_infrastructure/applications/educate
+
+up.databases:
+	pulumi up -C educate_infrastructure/databases -y
 
 up.educate:
 	pulumi up -C educate_infrastructure/applications/educate -y
 
+up.networking:
+	pulumi up -C educate_infrastructure/infra/network -y
+
 destroy.all:
 	make destroy.educate destroy.networking
 
-destroy.networking:
-	pulumi destroy -C educate_infrastructure/infra/network -y
+destroy.databases:
+	pulumi destroy -C educate_infrastructure/databases -y
 
 destroy.educate:
 	pulumi destroy -C educate_infrastructure/applications/educate -y
+
+destroy.networking:
+	pulumi destroy -C educate_infrastructure/infra/network -y
 
 test: # TODO change it to run in the container
 	python -m pytest --disable-pytest-warnings

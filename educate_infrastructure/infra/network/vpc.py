@@ -6,12 +6,13 @@ This includes:
 - Create an internet gateway
 - Create a route table and associate the created subnets with it
 - Create a routing table to include the relevant peers and their networks
+- Create an RDS subnet group
 """
 from itertools import cycle
 from typing import List, Text, Dict
 
 from pulumi import ComponentResource
-from pulumi_aws import ec2, get_availability_zones
+from pulumi_aws import ec2, get_availability_zones, rds
 
 SUBNET_PREFIX_V4 = (
     24  # A CIDR block of prefix length 24 allows for up to 255 individual IP addresses
@@ -25,7 +26,9 @@ class DTVpc(ComponentResource):
      Engineering team constructs and organizes VPC environments in AWS.
     """
 
-    def __init__(self, name: str, az_count: int, cidr_block):
+    def __init__(
+        self, name: str, az_count: int, cidr_block: str, rds_network: bool = False
+    ):
         """
         Build an AWS VPC with subnets, internet gateway, and routing table.
 
@@ -43,6 +46,7 @@ class DTVpc(ComponentResource):
 
         """
         self.name = name
+        self.rds_network = rds_network
         super().__init__("diceytech:infrastruture:aws:VPC", f"{self.name}-vpc")
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "False"}
@@ -72,22 +76,38 @@ class DTVpc(ComponentResource):
             cidr_block.subnets(new_prefix=SUBNET_PREFIX_V4),
         )
 
-        for index, zone, subnet_v4 in subnet_iterator:
-            if index < az_count:
-                self.create_subnet(index, zone, subnet_v4, is_public=True)
-            else:
-                self.create_subnet(index, zone, subnet_v4, is_public=False)
+        if self.rds_network:
+            for index, zone, subnet_v4 in subnet_iterator:
+                if index < az_count:
+                    self.create_subnet(zone, subnet_v4, is_public=True)
 
-    def get_id(self):
+            self.db_subnet_group = rds.SubnetGroup(
+                f"{self.name}-db-subnet-group",
+                description=f"RDS subnet group for {self.name}",
+                name=f"{self.name}-db-subnet-group",
+                subnet_ids=[net_id for net_id in self.public_subnet_ids],
+                tags=self.tags,
+            )
+        else:
+            for index, zone, subnet_v4 in subnet_iterator:
+                if index < az_count:
+                    self.create_subnet(zone, subnet_v4, is_public=True)
+                else:
+                    self.create_subnet(zone, subnet_v4, is_public=False)
+
+    def get_id(self) -> Text:
         return self.vpc.id
 
-    def get_public_subnet_ids(self):
+    def get_public_subnet_ids(self) -> List[Text]:
         return self.public_subnet_ids
 
-    def get_private_subnet_ids(self):
+    def get_private_subnet_ids(self) -> List[Text]:
         return self.private_subnet_ids
 
-    def create_subnet(self, index: int, zone: Text, subnet_v4, is_public):
+    def get_db_subnet_group_name(self) -> Text:
+        return self.db_subnet_group.name
+
+    def create_subnet(self, zone: Text, subnet_v4, is_public):
         if is_public:
             name_pre = f"{self.name}-public"
         else:
@@ -110,16 +130,18 @@ class DTVpc(ComponentResource):
                 subnet_id=subnet.id,
             )
 
-            eip = ec2.Eip(f"{self.name}-eip-{zone}", tags=self.tags)
-            nat_gateway = ec2.NatGateway(
-                f"{self.name}-natgw-{zone}",
-                subnet_id=subnet.id,
-                allocation_id=eip.id,
-                tags=self.tags,
-            )
-
-            self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
             self.public_subnet_ids.append(subnet.id)
+
+            if not self.rds_network:
+                eip = ec2.Eip(f"{self.name}-eip-{zone}", tags=self.tags)
+                nat_gateway = ec2.NatGateway(
+                    f"{self.name}-natgw-{zone}",
+                    subnet_id=subnet.id,
+                    allocation_id=eip.id,
+                    tags=self.tags,
+                )
+
+                self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
         else:
             # TODO Is 1 NAT Gateway per private subnet required?
             private_rt = ec2.RouteTable(

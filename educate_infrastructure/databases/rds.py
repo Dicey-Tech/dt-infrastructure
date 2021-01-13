@@ -7,9 +7,21 @@ from pulumi_aws import rds
 from pulumi_aws.ec2 import SecurityGroup
 from pydantic import BaseModel, PositiveInt, SecretStr, conint
 
-from educate_infrastructure.lib.dt_types import AWSBase
+# from educate_infrastructure.lib.dt_types import AWSBase
 
 MAX_BACKUP_DAYS = 35
+
+
+# TODO Remove
+class AWSBase(BaseModel):
+    """Base class for deriving configuration objects to pass to AWS component resources."""
+
+    tags: Dict
+    region: Text = "eu-west-2"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.tags.update({"pulumi_managed": "true"})
 
 
 class StorageType(str, Enum):  # noqa: WPS600
@@ -28,6 +40,9 @@ class DTReplicaDBConfig(BaseModel):
     public_access: bool = False
     security_groups: Optional[List[SecurityGroup]] = None
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class DTRDSConfig(AWSBase):
     """Configuration object for defining the interface to create an RDS instance with sane defaults."""
@@ -36,9 +51,9 @@ class DTRDSConfig(AWSBase):
     engine_version: Text
     instance_name: Text  # The name of the RDS instance
     password: SecretStr
-    parameter_overrides: List[Dict[Text, Union[Text, bool, int, float]]]  # noqa: WPS234
+    # parameter_overrides: List[Dict[Text, Union[Text, bool, int, float]]]  # noqa: WPS234
     port: PositiveInt
-    # subnet_group_name: Union[Text, Output[str]]
+    subnet_group_name: Union[Text, Output[str]]
     security_groups: List[SecurityGroup]
     backup_days: conint(ge=0, le=MAX_BACKUP_DAYS, strict=True) = 30  # type: ignore
     db_name: Optional[Text] = None  # The name of the database schema to create
@@ -54,6 +69,9 @@ class DTRDSConfig(AWSBase):
     username: Text = "dtdevops"
     read_replica: Optional[DTReplicaDBConfig] = None
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class DTMySQLConfig(DTRDSConfig):
     """Configuration container to specify settings specific to MySQL."""
@@ -62,7 +80,7 @@ class DTMySQLConfig(DTRDSConfig):
     engine_version: Text = "5.7"
     port: PositiveInt = PositiveInt(3306)
     instance_size: Text = "db.t2.large"
-
+    snapshot_identifier: Optional[Text]
     family: Text = "mysql5.7"
 
 
@@ -83,7 +101,7 @@ class DTRDSInstance(ComponentResource):
         :rtype: DTRDSInstance
         """
         super().__init__(
-            "ol:infrastructure:aws:database:DTRDSInstance",
+            "diceytech:infrastructure:aws:database:DTRDSInstance",
             db_config.instance_name,
             None,
         )
@@ -101,7 +119,7 @@ class DTRDSInstance(ComponentResource):
             auto_minor_version_upgrade=True,
             backup_retention_period=db_config.backup_days,
             copy_tags_to_snapshot=True,
-            # db_subnet_group_name=db_config.subnet_group_name,
+            db_subnet_group_name=db_config.subnet_group_name,
             deletion_protection=db_config.prevent_delete,
             engine=db_config.engine,
             engine_version=db_config.engine_version,
@@ -111,7 +129,6 @@ class DTRDSInstance(ComponentResource):
             max_allocated_storage=db_config.max_storage,
             multi_az=db_config.multi_az,
             name=db_config.db_name,
-            opts=resource_options,
             parameter_group_name=self.parameter_group.name,
             password=db_config.password.get_secret_value(),
             port=db_config.port,
@@ -122,6 +139,7 @@ class DTRDSInstance(ComponentResource):
             tags=db_config.tags,
             username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
+            # snapshot_identifier=db_config.snapshot_identifier,
         )
 
         component_outputs = {
@@ -130,3 +148,6 @@ class DTRDSInstance(ComponentResource):
         }
 
         self.register_outputs(component_outputs)
+
+    def get_endpoint(self) -> str:
+        return self.db_instance.endpoint

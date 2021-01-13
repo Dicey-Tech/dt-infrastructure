@@ -1,4 +1,4 @@
-"""Manage the creation of an RDS instance 
+"""Manage the creation of an RDS instance
 and a MongoDB instance deployed in an EC2 instance.
 
 
@@ -9,9 +9,10 @@ from pulumi_aws import ec2, get_ami
 from rds import DTMySQLConfig, DTRDSInstance
 
 env = get_stack()
-network_stack = StackReference(f"BbrSofiane/networking/prod")
+network_stack = StackReference("BbrSofiane/networking/prod")
 db_vpc_id = network_stack.get_output("db_vpc_id")
 db_private_subnet_ids = network_stack.get_output("db_private_subnet_ids")
+db_subnet_group_name = network_stack.get_output("db_subnet_group_name")
 
 # TODO Provison RDS Instance
 mysql_db_sg = ec2.SecurityGroup(
@@ -22,35 +23,25 @@ mysql_db_sg = ec2.SecurityGroup(
             protocol="tcp",
             from_port=3306,
             to_port=3306,
-            # TODO add educate app security_groups=[redash_instance_security_group.id],
+            cidr_blocks=["0.0.0.0/0"],
             description="MySQL access from Educate App instances",
         ),
     ],
-    egress=[
-        ec2.SecurityGroupEgressArgs(
-            protocol="-1",
-            from_port=0,
-            to_port=0,
-            cidr_blocks=["0.0.0.0/0"],
-        )
-    ],
-    # tags=aws_config.merged_tags({"Name": f"redash-db-access-{redash_environment}"}),
     vpc_id=db_vpc_id,
 )
 
 mysql_db_config = DTMySQLConfig(
-    instance_name=f"mysql-db-{env}",
-    # username= ""
+    instance_name=f"educate-sql-db-{env}",
+    subnet_group_name=db_subnet_group_name,
     password="password",
     security_groups=[mysql_db_sg],
-    db_name="mysql",
+    db_name="educate_db",
+    tags={"pulumi_managed": "True"},
+    # snapshot_identifier="educate-sql-db-2-final-snapshot",
 )
 
-mysql_db = DTRDSInstance(db_config=DTRDSConfig)
+mysql_db = DTRDSInstance(db_config=mysql_db_config)
 
 # TODO Provision MongoDB Instance
 
-export(
-    "mysql_endpoint",
-    mysql_db.endpoint,
-)
+export("mysql_endpoint", mysql_db.get_endpoint())

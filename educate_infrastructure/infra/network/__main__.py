@@ -16,7 +16,10 @@ apps_vpc = DTVpc(name="educate-app", az_count=2, cidr_block=app_network)
 
 db_config = Config("db_vpc")
 db_network = IPv4Network(db_config.require("cidr_block"))
-databases_vpc = DTVpc(name="databases", az_count=1, cidr_block=db_network)
+databases_vpc = DTVpc(
+    name="databases", az_count=2, cidr_block=db_network, rds_network=True
+)
+
 
 apps_to_db_peer = DTVPCPeeringConnection(
     f"dt-apps-{env}-to-db-{env}-vpc-peer",
@@ -31,3 +34,4 @@ export("apps_private_subnet_ids", apps_vpc.get_private_subnet_ids())
 export("db_vpc_id", databases_vpc.get_id())
 export("db_public_subnet_ids", databases_vpc.get_public_subnet_ids())
 export("db_private_subnet_ids", databases_vpc.get_private_subnet_ids())
+export("db_subnet_group_name", databases_vpc.get_db_subnet_group_name())
