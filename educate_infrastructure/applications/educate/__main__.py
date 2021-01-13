@@ -8,7 +8,7 @@ from ec2 import DTEc2
 env = get_stack()
 networking_stack = StackReference("BbrSofiane/networking/prod")
 
-apps_vpc_id = networking_stack.get_output("vpc_id")
+apps_vpc_id = networking_stack.get_output("apps_vpc_id")
 apps_public_subnet_ids = networking_stack.get_output("apps_public_subnet_ids")
 apps_private_subnet_ids = networking_stack.get_output("apps_private_subnet_ids")
 
