@@ -35,7 +35,7 @@ up.networking:
 	pulumi up -C educate_infrastructure/infra/network -y
 
 destroy.all:
-	make destroy.educate destroy.networking
+	make destroy.educate destroy.databases destroy.networking
 
 destroy.databases:
 	pulumi destroy -C educate_infrastructure/databases -y

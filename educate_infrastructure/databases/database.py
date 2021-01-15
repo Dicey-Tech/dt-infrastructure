@@ -24,19 +24,11 @@ class AWSBase(BaseModel):
         self.tags.update({"pulumi_managed": "true"})
 
 
-class StorageType(str, Enum):  # noqa: WPS600
-    """Container for constraining available selection of storage types."""
-
-    magnetic = "standard"
-    ssd = "gp2"
-    performance = "io1"
-
-
 class DTReplicaDBConfig(BaseModel):
     """Configuration object for defining configuration needed to create a read replica."""
 
-    instance_size: Text = "db.t3.small"
-    storage_type: StorageType = StorageType.ssd
+    instance_size: Text = rds.InstanceType.T3_MEDIUM
+    storage_type: rds.StorageType = rds.StorageType.GP2
     public_access: bool = False
     security_groups: Optional[List[SecurityGroup]] = None
 
@@ -60,12 +52,12 @@ class DTRDSConfig(AWSBase):
     instance_size: Text = "db.t2.large"
     is_public: bool = False
     max_storage: Optional[PositiveInt] = None  # Set to allow for storage autoscaling
-    multi_az: bool = False
-    prevent_delete: bool = False  # TODO Change to true
+    multi_az: bool = True
+    prevent_delete: bool = True
     public_access: bool = False
     take_final_snapshot: bool = True
     storage: PositiveInt = PositiveInt(50)  # noqa: WPS432
-    storage_type: StorageType = StorageType.ssd
+    storage_type: rds.StorageType = rds.StorageType.GP2
     username: Text = "dtdevops"
     read_replica: Optional[DTReplicaDBConfig] = None
 
@@ -79,9 +71,20 @@ class DTMySQLConfig(DTRDSConfig):
     engine: Text = "mysql"
     engine_version: Text = "5.7"
     port: PositiveInt = PositiveInt(3306)
-    instance_size: Text = "db.t2.large"
+    instance_size: Text = rds.InstanceType.T3_LARGE
     snapshot_identifier: Optional[Text]
     family: Text = "mysql5.7"
+
+
+class DTAuroraConfig(DTRDSConfig):
+    """Configuration container to specify settings specific to Aurora."""
+
+    engine: Text = rds.EngineType.AURORA_MYSQL
+    engine_version: Text = "5.7.mysql_aurora.2.07.2"
+    port: PositiveInt = PositiveInt(3306)
+    instance_size: Text = "db.t3.medium"
+    snapshot_identifier: Optional[Text]
+    family: Text = "aurora-mysql5.7"
 
 
 class DTRDSInstance(ComponentResource):
@@ -139,7 +142,7 @@ class DTRDSInstance(ComponentResource):
             tags=db_config.tags,
             username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
-            # snapshot_identifier=db_config.snapshot_identifier,
+            snapshot_identifier=db_config.snapshot_identifier,
         )
 
         component_outputs = {
@@ -151,3 +154,77 @@ class DTRDSInstance(ComponentResource):
 
     def get_endpoint(self) -> str:
         return self.db_instance.endpoint
+
+
+class DTAuroraCluster(ComponentResource):
+    """
+    Build an Aurora Cluster
+
+    """
+
+    def __init__(self, db_config: DTRDSConfig):
+        """Create an DTMySQLConfig, parameter group, and optionally read replica.
+
+        :param db_config: Configuration object for customizing the deployed database instance.
+        :type db_config: DTAuroraConfig
+
+        :returns: The constructed component resource object.
+
+        :rtype: DTAuroraCluster
+        """
+        super().__init__(
+            "diceytech:infrastructure:aws:database:DTAuroraCluster",
+            db_config.instance_name,
+            None,
+        )
+        """
+        self.parameter_group = rds.ParameterGroup(
+            f"{db_config.instance_name}-{db_config.engine}-parameter-group",
+            # family=parameter_group_family(db_config.engine, db_config.engine_version),
+            family=db_config.family,
+            name=f"{db_config.instance_name}-{db_config.engine}-parameter-group",
+        )
+        """
+        self.db_cluster = rds.Cluster(
+            f"{db_config.instance_name}-{db_config.engine}-instance",
+            backup_retention_period=db_config.backup_days,
+            copy_tags_to_snapshot=True,
+            db_subnet_group_name=db_config.subnet_group_name,
+            deletion_protection=db_config.prevent_delete,
+            cluster_identifier=db_config.instance_name,
+            engine=db_config.engine,
+            engine_version=db_config.engine_version,
+            final_snapshot_identifier=f"{db_config.instance_name}-{db_config.engine}-final-snapshot",
+            # db_cluster_parameter_group_name=self.parameter_group.name,
+            master_password=db_config.password.get_secret_value(),
+            port=db_config.port,
+            skip_final_snapshot=not db_config.take_final_snapshot,
+            tags=db_config.tags,
+            master_username=db_config.username,
+            vpc_security_group_ids=[group.id for group in db_config.security_groups],
+            # snapshot_identifier=db_config.snapshot_identifier,
+        )
+
+        self.cluster_instances = []
+        self.cluster_instances.append(
+            rds.ClusterInstance(
+                f"{db_config.instance_name}-{db_config.engine}-instance-0",
+                identifier=db_config.instance_name,
+                cluster_identifier=self.db_cluster.id,
+                engine=db_config.engine,
+                engine_version=db_config.engine_version,
+                instance_class=db_config.instance_size,
+                tags=db_config.tags,
+            )
+        )
+
+        component_outputs = {
+            # "parameter_group": self.parameter_group,
+            "aurora_cluster": self.db_cluster,
+            "aurora_instances": self.cluster_instances,
+        }
+
+        self.register_outputs(component_outputs)
+
+    def get_endpoint(self) -> str:
+        return self.db_cluster.endpoint

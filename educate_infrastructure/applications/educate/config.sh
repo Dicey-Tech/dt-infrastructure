@@ -21,6 +21,7 @@ export PUBLIC_IP=$(curl ifconfig.me)
 #echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
 #echo -e "EDXAPP_LMS_BASE: qa.3ducate.co.uk\nEDXAPP_CMS_BASE: studio.qa.3ducate.co.uk" > config.yml
 aws s3 cp s3://3ducate-config/qa-config.yml config.yml
+aws s3 cp s3://3ducate-config/my-passwords.yml my-passwords.yml
 
 # Install open edX
 # TODO find a better to run install
