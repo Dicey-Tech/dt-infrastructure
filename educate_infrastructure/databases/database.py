@@ -42,7 +42,7 @@ class DTRDSConfig(AWSBase):
     engine: Text
     engine_version: Text
     instance_name: Text  # The name of the RDS instance
-    password: SecretStr
+    password: Optional[SecretStr]
     # parameter_overrides: List[Dict[Text, Union[Text, bool, int, float]]]  # noqa: WPS234
     port: PositiveInt
     subnet_group_name: Union[Text, Output[str]]
@@ -82,7 +82,7 @@ class DTAuroraConfig(DTRDSConfig):
     engine: Text = rds.EngineType.AURORA_MYSQL
     engine_version: Text = "5.7.mysql_aurora.2.07.2"
     port: PositiveInt = PositiveInt(3306)
-    instance_size: Text = "db.t3.medium"
+    instance_size: Text = rds.InstanceType.T3_MEDIUM
     snapshot_identifier: Optional[Text]
     family: Text = "aurora-mysql5.7"
 
@@ -196,13 +196,13 @@ class DTAuroraCluster(ComponentResource):
             engine_version=db_config.engine_version,
             final_snapshot_identifier=f"{db_config.instance_name}-{db_config.engine}-final-snapshot",
             # db_cluster_parameter_group_name=self.parameter_group.name,
-            master_password=db_config.password.get_secret_value(),
+            # master_password=db_config.password.get_secret_value(),
             port=db_config.port,
             skip_final_snapshot=not db_config.take_final_snapshot,
             tags=db_config.tags,
             master_username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
-            # snapshot_identifier=db_config.snapshot_identifier,
+            snapshot_identifier=db_config.snapshot_identifier,
         )
 
         self.cluster_instances = []

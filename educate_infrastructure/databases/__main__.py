@@ -14,7 +14,7 @@ db_vpc_id = network_stack.get_output("db_vpc_id")
 db_private_subnet_ids = network_stack.get_output("db_private_subnet_ids")
 db_subnet_group_name = network_stack.get_output("db_subnet_group_name")
 
-# TODO Provison RDS Instance
+# TODO set source Security Group? That would force the provision order
 mysql_db_sg = ec2.SecurityGroup(
     f"mysql-db-sg-{env}",
     description="Access from the database VPC to the MySQL database",
@@ -45,10 +45,10 @@ mysql_db = DTRDSInstance(db_config=mysql_db_config)
 aurora_cluster_config = DTAuroraConfig(
     instance_name=f"educate-sql-db-{env}",
     subnet_group_name=db_subnet_group_name,
-    password="password",
+    # password="password",
     security_groups=[mysql_db_sg],
     tags={"pulumi_managed": "True"},
-    snapshot_identifier="educate-sql-db-2-final-snapshot",
+    snapshot_identifier="arn:aws:rds:eu-west-2:198538058567:snapshot:educate-sql-db-14-01-2021",
     prevent_delete=False,  # For testing
     multi_az=False,
 )
