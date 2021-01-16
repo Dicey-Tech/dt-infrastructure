@@ -16,6 +16,7 @@ from pulumi import ComponentResource
 from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
 
 
+# TODO Remove and use ec2 enums
 @unique
 class InstanceType(str, Enum):
     small = "t3a.small"
@@ -59,7 +60,7 @@ class DTEc2(ComponentResource):
         self.tags = {"pulumi_managed": "true"}
         super().__init__("diceytech:infrastructure:aws:EC2", f"{self.name}-instance")
 
-        self.size = "t2.large"
+        self.size = InstanceType.large
 
         # Ubuntu 20.04 LTS - Focal
         self.ami = get_ami(

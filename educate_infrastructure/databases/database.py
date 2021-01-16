@@ -7,21 +7,9 @@ from pulumi_aws import rds
 from pulumi_aws.ec2 import SecurityGroup
 from pydantic import BaseModel, PositiveInt, SecretStr, conint
 
-# from educate_infrastructure.lib.dt_types import AWSBase
+from educate_infrastructure.lib.dt_types import AWSBase
 
 MAX_BACKUP_DAYS = 35
-
-
-# TODO Remove
-class AWSBase(BaseModel):
-    """Base class for deriving configuration objects to pass to AWS component resources."""
-
-    tags: Dict
-    region: Text = "eu-west-2"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.tags.update({"pulumi_managed": "true"})
 
 
 class DTReplicaDBConfig(BaseModel):
