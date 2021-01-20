@@ -5,6 +5,7 @@ and a MongoDB instance deployed in an EC2 instance.
 """
 from pulumi import Config, get_stack, export, StackReference
 from pulumi_aws import ec2, get_ami, rds
+from educate_infrastructure.lib.dt_types import AWSBase
 
 from database import DTAuroraConfig, DTMySQLConfig, DTRDSInstance, DTAuroraCluster
 

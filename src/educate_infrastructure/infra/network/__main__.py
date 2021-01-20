@@ -6,7 +6,7 @@ from ipaddress import IPv4Network
 from pulumi import Config, export, get_stack
 from pulumi_aws import GetAmiFilterArgs, ec2, get_ami, get_availability_zones
 
-from vpc import DTVpc, DTVPCPeeringConnection
+from educate_infrastructure.infra.network.vpc import DTVpc, DTVPCPeeringConnection
 
 env = get_stack()
 

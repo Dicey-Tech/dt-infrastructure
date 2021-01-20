@@ -3,7 +3,7 @@
 from pulumi import Config, get_stack, export, StackReference
 from pulumi_aws import ebs, ec2, s3, get_ami, GetAmiFilterArgs, iam, lb, route53
 
-from ec2 import DTEc2
+from educate_infrastructure.applications.educate.ec2 import DTEc2
 
 env = get_stack()
 networking_stack = StackReference("BbrSofiane/networking/prod")

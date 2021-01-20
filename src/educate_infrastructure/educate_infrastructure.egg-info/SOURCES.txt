@@ -1,0 +1,6 @@
+README.md
+setup.py
+src/educate_infrastructure/educate_infrastructure.egg-info/PKG-INFO
+src/educate_infrastructure/educate_infrastructure.egg-info/SOURCES.txt
+src/educate_infrastructure/educate_infrastructure.egg-info/dependency_links.txt
+src/educate_infrastructure/educate_infrastructure.egg-info/top_level.txt

@@ -20,7 +20,7 @@ class TestDTVpc(object):
     def setup(self):
         self.name = "educate-app-vpc"
         self.az_count = 2
-        self.base = AWSBase()
+        # self.base = AWSBase()
         self.cidr_block = IPv4Network("172.255.100.0/16", False)
 
         self.test_vpc = DTVpc(
