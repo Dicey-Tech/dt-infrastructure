@@ -1,9 +1,11 @@
 """ Open edX native deployment on AWS"""
 
-from pulumi import Config, get_stack, export, StackReference
+from pulumi import Config, get_stack, export, StackReference, ResourceOptions
 from pulumi_aws import ebs, ec2, s3, get_ami, GetAmiFilterArgs, iam, lb, route53
 
 from educate_infrastructure.applications.educate.ec2 import DTEc2
+from educate_infrastructure.lib.ssm_provisioners import RemoteExec, ConnectionArgs
+
 
 env = get_stack()
 networking_stack = StackReference("BbrSofiane/networking/prod")
@@ -60,6 +62,17 @@ educate_app_instance = DTEc2(
     apps_vpc_id,
     apps_private_subnet_ids[0],
     educate_app_profile.id,
+)
+
+install_openedx = RemoteExec(
+    f"educate-provision-{env}",
+    ConnectionArgs(
+        instance_id=educate_app_instance.get_instance_id(),
+        ssm_document="nothing",
+        script_document="AWS-RunShellScript",
+    ),
+    commands=["echo 'Start running services'", "whoami", "cd ~ && touch test.log"],
+    opts=ResourceOptions(depends_on=[educate_app_instance]),
 )
 
 # TODO Create a load balancer to listen for HTTP traffic on port 80 and 443.
@@ -193,3 +206,4 @@ else:
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)
+export("domainName", record_lms.fqdn)
