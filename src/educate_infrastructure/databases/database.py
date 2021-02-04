@@ -1,8 +1,7 @@
 """ RDS """
-from enum import Enum
 from typing import Dict, List, Optional, Text, Union
 
-from pulumi import ComponentResource, Output
+from pulumi import ComponentResource, Output, ResourceOptions
 from pulumi_aws import rds
 from pulumi_aws.ec2 import SecurityGroup
 from pydantic import BaseModel, PositiveInt, SecretStr, conint
@@ -81,7 +80,7 @@ class DTRDSInstance(ComponentResource):
 
     """
 
-    def __init__(self, db_config: DTRDSConfig):
+    def __init__(self, db_config: DTRDSConfig, opts: ResourceOptions = None):
         """Create an RDS instance, parameter group, and optionally read replica.
 
         :param db_config: Configuration object for customizing the deployed database instance.
@@ -94,7 +93,7 @@ class DTRDSInstance(ComponentResource):
         super().__init__(
             "diceytech:infrastructure:aws:database:DTRDSInstance",
             db_config.instance_name,
-            None,
+            opts,
         )
 
         self.parameter_group = rds.ParameterGroup(
@@ -102,6 +101,7 @@ class DTRDSInstance(ComponentResource):
             # family=parameter_group_family(db_config.engine, db_config.engine_version),
             family=db_config.family,
             name=f"{db_config.instance_name}-{db_config.engine}-parameter-group",
+            opts=ResourceOptions(parent=self),
         )
 
         self.db_instance = rds.Instance(
@@ -131,6 +131,7 @@ class DTRDSInstance(ComponentResource):
             username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
             snapshot_identifier=db_config.snapshot_identifier,
+            opts=ResourceOptions(parent=self),
         )
 
         component_outputs = {
@@ -150,7 +151,7 @@ class DTAuroraCluster(ComponentResource):
 
     """
 
-    def __init__(self, db_config: DTRDSConfig):
+    def __init__(self, db_config: DTRDSConfig, opts: ResourceOptions = None):
         """Create an DTMySQLConfig, parameter group, and optionally read replica.
 
         :param db_config: Configuration object for customizing the deployed database instance.
@@ -163,7 +164,7 @@ class DTAuroraCluster(ComponentResource):
         super().__init__(
             "diceytech:infrastructure:aws:database:DTAuroraCluster",
             db_config.instance_name,
-            None,
+            opts,
         )
         """
         self.parameter_group = rds.ParameterGroup(
@@ -191,6 +192,7 @@ class DTAuroraCluster(ComponentResource):
             master_username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
             snapshot_identifier=db_config.snapshot_identifier,
+            opts=ResourceOptions(parent=self),
         )
 
         self.cluster_instances = []
@@ -203,6 +205,7 @@ class DTAuroraCluster(ComponentResource):
                 engine_version=db_config.engine_version,
                 instance_class=db_config.instance_size,
                 tags=db_config.tags,
+                opts=ResourceOptions(parent=self),
             )
         )
 

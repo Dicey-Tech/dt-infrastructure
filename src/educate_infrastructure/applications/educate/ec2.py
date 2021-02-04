@@ -6,7 +6,7 @@ This includes:
 # TODO Abstract Security Group so that there is no need to create a SG per instance
 from typing import List, Text, Optional
 
-from pulumi import ComponentResource, Output
+from pulumi import ComponentResource, Output, ResourceOptions
 from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
 from pydantic import BaseModel, PositiveInt
 
@@ -38,7 +38,7 @@ class DTEc2(ComponentResource):
     Engineering team constructs and deploys EC2 environments in AWS.
     """
 
-    def __init__(self, instance_config: DTEducateConfig):
+    def __init__(self, instance_config: DTEducateConfig, opts: ResourceOptions = None):
         """
         Build an Educate instance.
 
@@ -48,7 +48,9 @@ class DTEc2(ComponentResource):
         """
         self.name = instance_config.name
         self.tags = {"pulumi_managed": "true", "Name": self.name}
-        super().__init__("diceytech:infrastructure:aws:EC2", f"{self.name}-instance")
+        super().__init__(
+            "diceytech:infrastructure:aws:EC2", f"{self.name}-instance", opts
+        )
 
         self.size = instance_config.instance_type
 
@@ -75,6 +77,15 @@ class DTEc2(ComponentResource):
                 delete_on_termination=True, volume_size=instance_config.volume_size
             ),
             tags=self.tags,
+            opts=ResourceOptions(parent=self),
+        )
+
+        self.register_outputs(
+            {
+                "public_ip": self._instance.public_ip,
+                "public_dns": self._instance.public_dns,
+                "instance_id": self._instance.id,
+            }
         )
 
     def get_public_ip(self) -> Text:
