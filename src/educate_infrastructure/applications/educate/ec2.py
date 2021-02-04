@@ -1,38 +1,16 @@
 """This module defines a Pulumi component resource for encapsulating our best practices for building an AWS EC2.
 
 This includes:
-- TODO Create the named EC2 with appropriate tags
-- TODO Create a minimum of 3 subnets across multiple availability zones
-- TODO Create an internet gateway
-- TODO Create an IPv6 egress gateway (Why??)
-- TODO  Create a route table and associate the created subnets with it
-- TODO Create a routing table to include the relevant peers and their networks
+- Create the named EC2 with appropriate tags
 """
 # TODO Abstract Security Group so that there is no need to create a SG per instance
-from enum import Enum, unique
 from typing import List, Text
 
 from pulumi import ComponentResource
 from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
 
 
-# TODO Remove and use ec2 enums
-@unique
-class InstanceType(str, Enum):
-    small = "t3a.small"
-    medium = "t3a.medium"
-    large = "t3a.large"
-    general_purpose_large = "m5a.large"
-    general_purpose_xlarge = "m5a.xlarge"
-    high_mem_regular = "r5a.large"
-    high_mem_xlarge = "r5a.xlarge"
-
-    def __str__(self) -> str:
-        return str.__str__(self)
-
-
 # TODO Make the SecurityGroup an input parameter
-# TODO Add SSM role to instances in private subnets
 class DTEc2(ComponentResource):
     """Pulumi component for building all of the necessary pieces of an AWS EC2 instnace.
 
@@ -57,10 +35,10 @@ class DTEc2(ComponentResource):
         :type String
         """
         self.name = name
-        self.tags = {"pulumi_managed": "true"}
+        self.tags = {"pulumi_managed": "true", "Name": self.name}
         super().__init__("diceytech:infrastructure:aws:EC2", f"{self.name}-instance")
 
-        self.size = InstanceType.large
+        self.size = ec2.InstanceType.T3A_LARGE
 
         # Ubuntu 20.04 LTS - Focal
         self.ami = get_ami(
@@ -84,13 +62,13 @@ class DTEc2(ComponentResource):
             ],
             ingress=[
                 ec2.SecurityGroupIngressArgs(
-                    protocol="tcp",
+                    protocol=ec2.ProtocolType.TCP,
                     from_port=80,
                     to_port=80,
                     cidr_blocks=["0.0.0.0/0"],
                 ),
                 ec2.SecurityGroupIngressArgs(
-                    protocol="tcp",
+                    protocol=ec2.ProtocolType.TCP,
                     from_port=18000,
                     to_port=18999,
                     cidr_blocks=["0.0.0.0/0"],
@@ -117,13 +95,13 @@ class DTEc2(ComponentResource):
             tags={**self.tags, "Name": f"{self.name}"},
         )
 
-    def get_public_ip(self):
+    def get_public_ip(self) -> Text:
         return self._instance.public_ip
 
-    def get_public_dns(self):
+    def get_public_dns(self) -> Text:
         return self._instance.public_dns
 
-    def get_instance_id(self):
+    def get_instance_id(self) -> Text:
         return self._instance.id
 
     @staticmethod
