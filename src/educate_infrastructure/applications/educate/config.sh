@@ -1,4 +1,7 @@
 #!/bin/bash
+sudo su ubuntu
+cd /home/ubuntu
+
 # Fresh installations of Ubuntu do not have a locale yet, and this will cause
 # the Open edX installer scripts to fail, so we'll  set it now.
 # For any input prompts that follow, you can select the default value.
@@ -13,9 +16,6 @@ sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt-get install awscli -y
 
-# Create config.yml
-cd ~
-
 #TODO get config from s3
 # export PUBLIC_IP=$(curl ifconfig.me)
 #echo -e "EDXAPP_LMS_BASE: \"$PUBLIC_IP\"\nEDXAPP_CMS_BASE: \"$PUBLIC_IP:18010\"" > config.yml
@@ -27,9 +27,9 @@ aws s3 cp s3://3ducate-config/my-passwords.yml my-passwords.yml
 # TODO find a better to run install
 wget https://raw.githubusercontent.com/BbrSofiane/edx.scripts/master/edx.platform-install.sh 
 chmod +x edx.platform-install.sh
-sudo nohup ./edx.platform-install.sh &
+# sudo nohup ./edx.platform-install.sh &
 
 # versions.py - Script to list versions of core elements of open edx
-wget https://gist.githubusercontent.com/fdns/8032710eceea0a2c63c1b4f0a5da8ec1/raw/29d0bfcc9d0152c9f57629598c02a73061a9c0cc/version.py
-chmod +x version.py
-sudo ./version.py > versions.log
+# wget https://gist.githubusercontent.com/fdns/8032710eceea0a2c63c1b4f0a5da8ec1/raw/29d0bfcc9d0152c9f57629598c02a73061a9c0cc/version.py
+# chmod +x version.py
+# sudo ./version.py > versions.log
