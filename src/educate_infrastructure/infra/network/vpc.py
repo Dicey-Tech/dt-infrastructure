@@ -9,26 +9,40 @@ This includes:
 - Create an RDS subnet group
 """
 from itertools import cycle
-from typing import List, Text, Dict
+from typing import List, Text, Dict, Optional
+from ipaddress import IPv4Network
 
 from pulumi import ComponentResource
 from pulumi_aws import ec2, get_availability_zones, rds
+from pydantic import BaseModel, PositiveInt
 
 SUBNET_PREFIX_V4 = (
     24  # A CIDR block of prefix length 24 allows for up to 255 individual IP addresses
 )
 
 
+class DTVPCConfig(BaseModel):
+    """
+    Configuration object for defining configuration needed to create a VPC.
+    """
+
+    name: Text
+    az_count: Optional[PositiveInt] = 2
+    cidr_block: IPv4Network
+    rds_network: Optional[bool] = False
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
 class DTVpc(ComponentResource):
     """Pulumi component for building all of the necessary pieces of an AWS VPC.
 
     A component resource that encapsulates all of the standard practices of how the Dicey Tech
-     Engineering team constructs and organizes VPC environments in AWS.
+    Engineering team constructs and organizes VPC environments in AWS.
     """
 
-    def __init__(
-        self, name: str, az_count: int, cidr_block: str, rds_network: bool = False
-    ):
+    def __init__(self, network_config: DTVPCConfig):
         """
         Build an AWS VPC with subnets, internet gateway, and routing table.
 
@@ -45,16 +59,22 @@ class DTVpc(ComponentResource):
         :type opts: IPv4Network
 
         """
-        self.name = name
-        self.rds_network = rds_network
+        self.name = network_config.name
+        self.rds_network = network_config.rds_network
         super().__init__("diceytech:infrastruture:aws:VPC", f"{self.name}-vpc")
 
         self.tags = {"pulumi_managed": "true", "AutoOff": "False"}
         self.vpc = ec2.Vpc(
             f"{self.name}-vpc",
-            cidr_block=str(cidr_block),
+            cidr_block=str(network_config.cidr_block),
             assign_generated_ipv6_cidr_block=True,
             tags=self.tags,
+        )
+
+        self.s3_gateway_endpoint = ec2.VpcEndpoint(
+            f"{self.name}-s3-gateway-endpoint",
+            vpc_id=self.vpc.id,
+            service_name="com.amazonaws.eu-west-2.s3",
         )
 
         self.igw = ec2.InternetGateway(f"{self.name}-igw", vpc_id=self.vpc.id)
@@ -70,18 +90,17 @@ class DTVpc(ComponentResource):
         self.public_subnet_ids: List[ec2.Subnet] = []
         self.nat_gateway_ids: Dict[Text, Text] = {}
         self.private_subnet_ids: List[ec2.Subnet] = []
-        zones: List[Text] = get_availability_zones().names[:az_count]
+        zones: List[Text] = get_availability_zones().names[: network_config.az_count]
 
-        # TODO make subnet cird programmatically defined
         subnet_iterator = zip(
-            range(az_count * 2),
+            range(network_config.az_count * 2),
             cycle(zones),
-            cidr_block.subnets(new_prefix=SUBNET_PREFIX_V4),
+            network_config.cidr_block.subnets(new_prefix=SUBNET_PREFIX_V4),
         )
 
         if self.rds_network:
             for index, zone, subnet_v4 in subnet_iterator:
-                if index < az_count:
+                if index < network_config.az_count:
                     self.create_subnet(zone, subnet_v4, is_public=False)
 
             self.db_subnet_group = rds.SubnetGroup(
@@ -93,7 +112,7 @@ class DTVpc(ComponentResource):
             )
         else:
             for index, zone, subnet_v4 in subnet_iterator:
-                if index < az_count:
+                if index < network_config.az_count:
                     self.create_subnet(zone, subnet_v4, is_public=True)
                 else:
                     self.create_subnet(zone, subnet_v4, is_public=False)
@@ -108,7 +127,8 @@ class DTVpc(ComponentResource):
         return self.private_subnet_ids
 
     def get_db_subnet_group_name(self) -> Text:
-        return self.db_subnet_group.name
+        if self.rds_network:
+            return self.db_subnet_group.name
 
     def create_subnet(self, zone: Text, subnet_v4, is_public):
         if is_public:
@@ -160,7 +180,6 @@ class DTVpc(ComponentResource):
                     tags=self.tags,
                 )
             else:
-                # TODO Is 1 NAT Gateway per private subnet required?
                 private_rt = ec2.RouteTable(
                     f"{name_pre}-rt-{zone}",
                     vpc_id=self.vpc.id,
@@ -180,10 +199,6 @@ class DTVpc(ComponentResource):
             )
 
             self.private_subnet_ids.append(subnet.id)
-
-
-# TODO Create a VPCConfig class to validate config values
-# https://github.com/mitodl/ol-infrastructure/blob/87021e2a8681c769354c1b227328433adaa1af15/src/ol_infrastructure/components/aws/olvpc.py#L41
 
 
 class DTVPCPeeringConnection(ComponentResource):

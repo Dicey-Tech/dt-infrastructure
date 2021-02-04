@@ -4,22 +4,33 @@
 """
 from ipaddress import IPv4Network
 from pulumi import Config, export, get_stack
-from pulumi_aws import GetAmiFilterArgs, ec2, get_ami, get_availability_zones
 
-from educate_infrastructure.infra.network.vpc import DTVpc, DTVPCPeeringConnection
+from educate_infrastructure.infra.network.vpc import (
+    DTVpc,
+    DTVPCPeeringConnection,
+    DTVPCConfig,
+)
 
 env = get_stack()
 
 apps_config = Config("apps_vpc")
 app_network = IPv4Network(apps_config.require("cidr_block"))
-apps_vpc = DTVpc(name="educate-app", az_count=2, cidr_block=app_network)
+apps_network_config = DTVPCConfig(
+    name="educate-app",
+    cidr_block=app_network,
+)
+
+apps_vpc = DTVpc(apps_network_config)
 
 db_config = Config("db_vpc")
 db_network = IPv4Network(db_config.require("cidr_block"))
-databases_vpc = DTVpc(
-    name="databases", az_count=2, cidr_block=db_network, rds_network=True
+db_network_config = DTVPCConfig(
+    name="databases",
+    cidr_block=db_network,
+    rds_network=True,
 )
 
+databases_vpc = DTVpc(db_network_config)
 
 apps_to_db_peer = DTVPCPeeringConnection(
     f"dt-apps-{env}-to-db-{env}-vpc-peer",
