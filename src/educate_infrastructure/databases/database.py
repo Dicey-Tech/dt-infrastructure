@@ -219,7 +219,7 @@ class DTAuroraCluster(ComponentResource):
 
         self.register_outputs(component_outputs)
 
-        info(msg=f"{self.db_cluster.cluster_resource_id} Created.", resource=self)
+        info(msg=f"{str(self.db_cluster.cluster_resource_id)} created.", resource=self)
 
     def get_endpoint(self) -> str:
         return self.db_cluster.endpoint

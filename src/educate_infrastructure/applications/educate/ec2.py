@@ -61,8 +61,13 @@ class DTEc2(ComponentResource):
         # Ubuntu 20.04 LTS - Focal
         self.ami = get_ami(
             most_recent=True,
-            owners=["137112412989"],
-            filters=[GetAmiFilterArgs(name="name", values=["amzn-ami-hvm-*"])],
+            owners=["679593333241"],
+            filters=[
+                GetAmiFilterArgs(
+                    name="name",
+                    values=["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"],
+                ),
+            ],
         )
 
         # TODO Smells bad....
@@ -75,7 +80,7 @@ class DTEc2(ComponentResource):
             subnet_id=instance_config.app_subnet_id,
             vpc_security_group_ids=[instance_config.security_group_id],
             user_data=self.user_data,
-            ami="ami-0a76049070d0f8861",
+            ami=self.ami.id,  # "ami-0a0be606699ba3f19"
             iam_instance_profile=instance_config.iam_instance_profile_id,
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
                 delete_on_termination=True, volume_size=instance_config.volume_size

@@ -19,6 +19,7 @@ from pydantic import BaseModel, PositiveInt
 SUBNET_PREFIX_V4 = (
     24  # A CIDR block of prefix length 24 allows for up to 255 individual IP addresses
 )
+# TODO Remove private routes update
 
 
 class DTVPCConfig(BaseModel):
@@ -103,11 +104,13 @@ class DTVpc(ComponentResource):
             network_config.cidr_block.subnets(new_prefix=SUBNET_PREFIX_V4),
         )
 
-        if self.rds_network:
-            for index, zone, subnet_v4 in subnet_iterator:
-                if index < network_config.az_count:
-                    self.create_subnet(zone, subnet_v4, is_public=False)
+        for index, zone, subnet_v4 in subnet_iterator:
+            if index < network_config.az_count:
+                self.create_subnet(zone, subnet_v4, is_public=True)
+            else:
+                self.create_subnet(zone, subnet_v4, is_public=False)
 
+        if self.rds_network:
             self.db_subnet_group = rds.SubnetGroup(
                 f"{self.name}-db-subnet-group",
                 description=f"RDS subnet group for {self.name}",
@@ -117,26 +120,13 @@ class DTVpc(ComponentResource):
                 opts=ResourceOptions(parent=self),
             )
 
-            self.register_outputs(
-                {
-                    "public_subnet_ids": self.public_subnet_ids,
-                    "private_subnet_ids": self.private_subnet_ids,
-                    "db_subnet_group_name": self.db_subnet_group.name,
-                }
-            )
-        else:
-            for index, zone, subnet_v4 in subnet_iterator:
-                if index < network_config.az_count:
-                    self.create_subnet(zone, subnet_v4, is_public=True)
-                else:
-                    self.create_subnet(zone, subnet_v4, is_public=False)
-
-            self.register_outputs(
-                {
-                    "public_subnet_ids": self.public_subnet_ids,
-                    "private_subnet_ids": self.private_subnet_ids,
-                }
-            )
+        self.register_outputs(
+            {
+                "public_subnet_ids": self.public_subnet_ids,
+                "private_subnet_ids": self.private_subnet_ids,
+                "db_subnet_group_name": self.db_subnet_group.name,
+            }
+        )
 
         info(msg=f"{self.name}-vpc created.", resource=self)
 
@@ -180,50 +170,34 @@ class DTVpc(ComponentResource):
 
             self.public_subnet_ids.append(subnet.id)
 
-            if not self.rds_network:
-                eip = ec2.Eip(
-                    f"{self.name}-eip-{zone}",
-                    tags=self.tags,
-                    opts=ResourceOptions(parent=self),
-                )
+            eip = ec2.Eip(
+                f"{self.name}-eip-{zone}",
+                tags=self.tags,
+                opts=ResourceOptions(parent=self),
+            )
 
-                nat_gateway = ec2.NatGateway(
-                    f"{self.name}-natgw-{zone}",
-                    subnet_id=subnet.id,
-                    allocation_id=eip.id,
-                    tags=self.tags,
-                    opts=ResourceOptions(parent=self),
-                )
+            nat_gateway = ec2.NatGateway(
+                f"{self.name}-natgw-{zone}",
+                subnet_id=subnet.id,
+                allocation_id=eip.id,
+                tags=self.tags,
+                opts=ResourceOptions(parent=self),
+            )
 
-                self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
+            self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
         else:
-            if self.rds_network:
-                private_rt = ec2.RouteTable(
-                    f"{name_pre}-rt-{zone}",
-                    vpc_id=self.vpc.id,
-                    routes=[
-                        ec2.RouteTableRouteArgs(
-                            cidr_block="0.0.0.0/0",
-                            # egress_only_gateway_id=self.egress_igw.id,
-                            gateway_id=self.igw.id,
-                        )
-                    ],
-                    tags=self.tags,
-                    opts=ResourceOptions(parent=self),
-                )
-            else:
-                private_rt = ec2.RouteTable(
-                    f"{name_pre}-rt-{zone}",
-                    vpc_id=self.vpc.id,
-                    routes=[
-                        ec2.RouteTableRouteArgs(
-                            cidr_block="0.0.0.0/0",
-                            gateway_id=self.nat_gateway_ids[f"{zone}"],
-                        ),
-                    ],
-                    tags=self.tags,
-                    opts=ResourceOptions(parent=self),
-                )
+            private_rt = ec2.RouteTable(
+                f"{name_pre}-rt-{zone}",
+                vpc_id=self.vpc.id,
+                routes=[
+                    ec2.RouteTableRouteArgs(
+                        cidr_block="0.0.0.0/0",
+                        gateway_id=self.nat_gateway_ids[f"{zone}"],
+                    ),
+                ],
+                tags=self.tags,
+                opts=ResourceOptions(parent=self),
+            )
 
             ec2.RouteTableAssociation(
                 f"{name_pre}-rta-{zone}",

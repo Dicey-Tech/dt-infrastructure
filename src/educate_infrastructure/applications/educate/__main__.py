@@ -75,6 +75,12 @@ security_group = ec2.SecurityGroup(
         ),
         ec2.SecurityGroupIngressArgs(
             protocol=ec2.ProtocolType.TCP,
+            from_port=443,
+            to_port=443,
+            cidr_blocks=["0.0.0.0/0"],
+        ),
+        ec2.SecurityGroupIngressArgs(
+            protocol=ec2.ProtocolType.TCP,
             from_port=18000,
             to_port=18999,
             cidr_blocks=["0.0.0.0/0"],
