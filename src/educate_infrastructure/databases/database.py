@@ -1,7 +1,7 @@
 """ RDS """
 from typing import Dict, List, Optional, Text, Union
 
-from pulumi import ComponentResource, Output, ResourceOptions
+from pulumi import ComponentResource, Output, ResourceOptions, info
 from pulumi_aws import rds
 from pulumi_aws.ec2 import SecurityGroup
 from pydantic import BaseModel, PositiveInt, SecretStr, conint
@@ -141,6 +141,8 @@ class DTRDSInstance(ComponentResource):
 
         self.register_outputs(component_outputs)
 
+        info(msg=f"{db_config.instance_name} created.", resource=self)
+
     def get_endpoint(self) -> str:
         return self.db_instance.endpoint
 
@@ -216,6 +218,8 @@ class DTAuroraCluster(ComponentResource):
         }
 
         self.register_outputs(component_outputs)
+
+        info(msg=f"{self.db_cluster.cluster_resource_id} Created.", resource=self)
 
     def get_endpoint(self) -> str:
         return self.db_cluster.endpoint

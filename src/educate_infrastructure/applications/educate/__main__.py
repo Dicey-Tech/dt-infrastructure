@@ -1,11 +1,13 @@
 """ Open edX native deployment on AWS"""
 
-from pulumi import Config, get_stack, export, StackReference
+from pulumi import Config, get_stack, get_project, export, StackReference
 from pulumi_aws import ec2, iam, lb, route53
 
 from educate_infrastructure.applications.educate.ec2 import DTEc2, DTEducateConfig
 
 env = get_stack()
+proj = get_project()
+
 networking_stack = StackReference("BbrSofiane/networking/prod")
 
 apps_vpc_id = networking_stack.get_output("apps_vpc_id")
@@ -35,27 +37,25 @@ instance_assume_role_policy = iam.get_policy_document(
 )
 
 educate_app_role = iam.Role(
-    "educate-app-role", assume_role_policy=instance_assume_role_policy.json, tags=tags
+    f"{proj}-role", assume_role_policy=instance_assume_role_policy.json, tags=tags
 )
 
 ssm_role_policy_attach = iam.RolePolicyAttachment(
-    "ssm-educate-app-policy-attach",
+    f"ssm-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
 )
 
 s3_role_policy_attach = iam.RolePolicyAttachment(
-    "s3-educate-app-policy-attach",
+    f"s3-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonS3FullAccess",
 )
 
-educate_app_profile = iam.InstanceProfile(
-    "educate-app-profile", role=educate_app_role.name
-)
+educate_app_profile = iam.InstanceProfile(f"{proj}-profile", role=educate_app_role.name)
 
 security_group = ec2.SecurityGroup(
-    f"educate-{env}-sg",
+    f"{proj}-{env}-sg",
     vpc_id=apps_vpc_id,
     description="Enable HTTP and HTTPS access",
     egress=[
@@ -84,7 +84,7 @@ security_group = ec2.SecurityGroup(
 )
 
 instance_config = DTEducateConfig(
-    name=f"educate-app-{env}",
+    name=f"{proj}-{env}",
     app_vpc_id=apps_vpc_id,
     app_subnet_id=apps_private_subnet_ids[0],
     iam_instance_profile_id=educate_app_profile.id,
@@ -96,7 +96,7 @@ educate_app_instance = DTEc2(instance_config)
 
 # TODO Add enable_deletion_protection=True, access_logs
 educate_app_alb = lb.LoadBalancer(
-    f"educate-app-alb-{env}",
+    f"{proj}-alb-{env}",
     load_balancer_type="application",
     security_groups=[security_group.id],
     subnets=apps_public_subnet_ids,
@@ -104,7 +104,7 @@ educate_app_alb = lb.LoadBalancer(
 )
 
 educate_app_tg = lb.TargetGroup(
-    f"educate-app-tg-{env}",
+    f"{proj}-tg-{env}",
     port=80,
     protocol="HTTP",
     vpc_id=apps_vpc_id,
@@ -112,7 +112,7 @@ educate_app_tg = lb.TargetGroup(
 )
 
 http_lb_listener = lb.Listener(
-    f"educate-app-http-listener-{env}",
+    f"{proj}-http-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=80,
     default_actions=[
@@ -128,7 +128,7 @@ http_lb_listener = lb.Listener(
 )
 
 https_lb_listener = lb.Listener(
-    f"educate-app-https-listener-{env}",
+    f"{proj}-https-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=443,
     protocol="HTTPS",
@@ -138,7 +138,7 @@ https_lb_listener = lb.Listener(
 )
 
 educate_target_group_attachment = lb.TargetGroupAttachment(
-    f"educate-app-tg-attachement-{env}",
+    f"{proj}-tg-attachement-{env}",
     target_group_arn=educate_app_tg.arn,
     target_id=educate_app_instance.get_instance_id(),
     port=80,
@@ -158,7 +158,7 @@ alias = route53.RecordAliasArgs(
 
 if env == "prod":
     record_lms = route53.Record(
-        f"educate-app-record-lms-{env}",
+        f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
         name=f"{zone.name}",
         type="A",
@@ -167,7 +167,7 @@ if env == "prod":
 
     for record in records_required:
         add_record = route53.Record(
-            f"educate-app-record-{record}-{env}",
+            f"{proj}-record-{record}-{env}",
             zone_id=zone.zone_id,
             name=f"{record}.{zone.name}",
             type="A",
@@ -176,7 +176,7 @@ if env == "prod":
         records.append(add_record)
 else:
     record_lms = route53.Record(
-        f"educate-app-record-lms-{env}",
+        f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
         name=f"{env}.{zone.name}",
         type="A",
@@ -185,7 +185,7 @@ else:
 
     for record in records_required:
         add_record = route53.Record(
-            f"educate-app-record-{record}-{env}",
+            f"{proj}-record-{record}-{env}",
             zone_id=zone.zone_id,
             name=f"{record}.{env}.{zone.name}",
             type="A",

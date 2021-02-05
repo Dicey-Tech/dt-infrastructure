@@ -12,7 +12,7 @@ from itertools import cycle
 from typing import List, Text, Dict, Optional
 from ipaddress import IPv4Network
 
-from pulumi import ComponentResource, ResourceOptions
+from pulumi import ComponentResource, ResourceOptions, info
 from pulumi_aws import ec2, get_availability_zones, rds
 from pydantic import BaseModel, PositiveInt
 
@@ -46,17 +46,13 @@ class DTVpc(ComponentResource):
         """
         Build an AWS VPC with subnets, internet gateway, and routing table.
 
-        :param vpc_config: Configuration object for customizing the created VPC and
+        :param network_config: Configuration object for customizing the created VPC and
             associated resources.
-        :type vpc_config: OLVPCConfig
+        :type vpc_config: DTVPCConfig
 
         :param opts: Optional resource options to be merged into the defaults.  Useful
             for handling things like AWS provider overrides.
         :type opts: Optional[ResourceOptions]
-
-        :param opts: Optional resource options to be merged into the defaults.  Useful
-            for handling things like AWS provider overrides.
-        :type opts: IPv4Network
 
         """
         self.name = network_config.name
@@ -141,6 +137,8 @@ class DTVpc(ComponentResource):
                     "private_subnet_ids": self.private_subnet_ids,
                 }
             )
+
+        info(msg=f"{self.name}-vpc created.", resource=self)
 
     def get_id(self) -> Text:
         return self.vpc.id

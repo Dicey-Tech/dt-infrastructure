@@ -1,12 +1,13 @@
-"""This module defines a Pulumi component resource for encapsulating our best practices for building an AWS EC2.
+"""
+This module defines a Pulumi component resource for encapsulating our best practices for
+building an Educate Instance.
 
 This includes:
 - Create the named EC2 with appropriate tags
 """
-# TODO Abstract Security Group so that there is no need to create a SG per instance
 from typing import List, Text, Optional
 
-from pulumi import ComponentResource, Output, ResourceOptions
+from pulumi import ComponentResource, Output, ResourceOptions, info
 from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
 from pydantic import BaseModel, PositiveInt
 
@@ -30,7 +31,6 @@ class DTEducateConfig(BaseModel):
         arbitrary_types_allowed = True
 
 
-# TODO Make the SecurityGroup an input parameter
 class DTEc2(ComponentResource):
     """Pulumi component for building all of the necessary pieces of an AWS EC2 instnace.
 
@@ -45,6 +45,10 @@ class DTEc2(ComponentResource):
         :param instance_config: Config object for customizing the created Educate instance
             and associated resources.
         :type DTEducateConfig
+
+        :param opts: Optional resource options to be merged into the defaults.  Useful
+            for handling things like AWS provider overrides.
+        :type opts: Optional[ResourceOptions]
         """
         self.name = instance_config.name
         self.tags = {"pulumi_managed": "true", "Name": self.name}
@@ -87,6 +91,8 @@ class DTEc2(ComponentResource):
                 "instance_id": self._instance.id,
             }
         )
+
+        info(msg=f"{self.name} created.", resource=self)
 
     def get_public_ip(self) -> Text:
         return self._instance.public_ip

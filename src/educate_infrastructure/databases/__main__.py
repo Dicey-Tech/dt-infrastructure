@@ -4,18 +4,22 @@ and a MongoDB instance deployed in an EC2 instance.
 
 """
 from pulumi import Config, get_stack, export, StackReference
+from pulumi.metadata import get_project
 from pulumi_aws import ec2, get_ami, rds
 from educate_infrastructure.lib.dt_types import AWSBase
 
 from educate_infrastructure.databases.database import DTAuroraConfig, DTAuroraCluster
 
+
 env = get_stack()
+proj = get_project()
+
 network_stack = StackReference("BbrSofiane/networking/prod")
+
 db_vpc_id = network_stack.get_output("db_vpc_id")
 db_private_subnet_ids = network_stack.get_output("db_private_subnet_ids")
 db_subnet_group_name = network_stack.get_output("db_subnet_group_name")
 
-# TODO set source Security Group? That would force the provision order
 mysql_db_sg = ec2.SecurityGroup(
     f"mysql-db-sg-{env}",
     description="Access from the database VPC to the MySQL database",
