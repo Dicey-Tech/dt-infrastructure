@@ -54,8 +54,8 @@ destroy.educate:
 destroy.networking:
 	pulumi destroy -C $(NETWORKING) -y
 
-connect.educate:
-	aws ssm start-session --target (pulumi -C $(EDUCATE) stack output instanceId)
+connect.educate: #TODO Fix command
+	aws ssm start-session --target $(pulumi -C src/educate_infrastructure/applications/educate stack output instanceId)
 
 test: # TODO change it to run in the container
 	python -m pytest --disable-pytest-warnings

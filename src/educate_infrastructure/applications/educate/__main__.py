@@ -1,13 +1,21 @@
-""" Open edX native deployment on AWS"""
+"""Open edX native deployment on AWS"""
 
-from pulumi import Config, get_stack, export, StackReference, ResourceOptions
-from pulumi_aws import ebs, ec2, s3, get_ami, GetAmiFilterArgs, iam, lb, route53
+from pulumi import (
+    Config,
+    get_stack,
+    get_project,
+    export,
+    StackReference,
+    ResourceOptions,
+)
+from pulumi_aws import ec2, iam, lb, route53
 
-from educate_infrastructure.applications.educate.ec2 import DTEc2
+from educate_infrastructure.applications.educate.ec2 import DTEc2, DTEducateConfig
 from educate_infrastructure.lib.ssm_provisioners import RemoteExec, ConnectionArgs
 
-
 env = get_stack()
+proj = get_project()
+
 networking_stack = StackReference("BbrSofiane/networking/prod")
 
 apps_vpc_id = networking_stack.get_output("apps_vpc_id")
@@ -17,7 +25,6 @@ apps_private_subnet_ids = networking_stack.get_output("apps_private_subnet_ids")
 # TODO Add resource dependencies opts=pulumi.ResourceOptions(depends_on=[server])
 
 tags = {
-    "Name": f"Educate App - {env}",
     "pulumi_managed": "true",
 }
 
@@ -38,31 +45,68 @@ instance_assume_role_policy = iam.get_policy_document(
 )
 
 educate_app_role = iam.Role(
-    "educate-app-role", assume_role_policy=instance_assume_role_policy.json, tags=tags
+    f"{proj}-role", assume_role_policy=instance_assume_role_policy.json, tags=tags
 )
 
 ssm_role_policy_attach = iam.RolePolicyAttachment(
-    "ssm-educate-app-policy-attach",
+    f"ssm-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
 )
 
 s3_role_policy_attach = iam.RolePolicyAttachment(
-    "s3-educate-app-policy-attach",
+    f"s3-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonS3FullAccess",
 )
 
-educate_app_profile = iam.InstanceProfile(
-    "educate-app-profile", role=educate_app_role.name
+educate_app_profile = iam.InstanceProfile(f"{proj}-profile", role=educate_app_role.name)
+
+security_group = ec2.SecurityGroup(
+    f"{proj}-{env}-sg",
+    vpc_id=apps_vpc_id,
+    description="Enable HTTP and HTTPS access",
+    egress=[
+        ec2.SecurityGroupEgressArgs(
+            protocol="-1",
+            from_port=0,
+            to_port=0,
+            cidr_blocks=["0.0.0.0/0"],
+        )
+    ],
+    ingress=[
+        ec2.SecurityGroupIngressArgs(
+            protocol=ec2.ProtocolType.TCP,
+            from_port=80,
+            to_port=80,
+            cidr_blocks=["0.0.0.0/0"],
+        ),
+        ec2.SecurityGroupIngressArgs(
+            protocol=ec2.ProtocolType.TCP,
+            from_port=443,
+            to_port=443,
+            cidr_blocks=["0.0.0.0/0"],
+        ),
+        ec2.SecurityGroupIngressArgs(
+            protocol=ec2.ProtocolType.TCP,
+            from_port=18000,
+            to_port=18999,
+            cidr_blocks=["0.0.0.0/0"],
+        ),
+    ],
+    tags={**tags, "Name": "Educate Security Group"},
 )
 
-educate_app_instance = DTEc2(
-    f"educate-app-{env}",
-    apps_vpc_id,
-    apps_private_subnet_ids[0],
-    educate_app_profile.id,
+instance_config = DTEducateConfig(
+    name=f"{proj}-{env}",
+    app_vpc_id=apps_vpc_id,
+    app_subnet_id=apps_private_subnet_ids[0],
+    iam_instance_profile_id=educate_app_profile.id,
+    security_group_id=security_group.id,
+    instance_type=ec2.InstanceType.T3A_LARGE,
 )
+
+educate_app_instance = DTEc2(instance_config)
 
 install_openedx = RemoteExec(
     f"educate-provision-{env}",
@@ -75,46 +119,17 @@ install_openedx = RemoteExec(
     opts=ResourceOptions(depends_on=[educate_app_instance]),
 )
 
-# TODO Create a load balancer to listen for HTTP traffic on port 80 and 443.
-sgroup = ec2.SecurityGroup(
-    "educate-app-alb-sg",
-    vpc_id=apps_vpc_id,
-    description="Enable HTTP access",
-    egress=[
-        ec2.SecurityGroupEgressArgs(
-            protocol="-1",
-            from_port=0,
-            to_port=0,
-            cidr_blocks=["0.0.0.0/0"],
-        )
-    ],
-    ingress=[
-        ec2.SecurityGroupIngressArgs(
-            protocol="tcp",
-            from_port=80,
-            to_port=80,
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-        ec2.SecurityGroupIngressArgs(
-            protocol="tcp",
-            from_port=443,
-            to_port=443,
-            cidr_blocks=["0.0.0.0/0"],
-        ),
-    ],
-)
-
 # TODO Add enable_deletion_protection=True, access_logs
 educate_app_alb = lb.LoadBalancer(
-    f"educate-app-alb-{env}",
+    f"{proj}-alb-{env}",
     load_balancer_type="application",
-    security_groups=[sgroup.id],
+    security_groups=[security_group.id],
     subnets=apps_public_subnet_ids,
     tags=tags,
 )
 
 educate_app_tg = lb.TargetGroup(
-    f"educate-app-tg-{env}",
+    f"{proj}-tg-{env}",
     port=80,
     protocol="HTTP",
     vpc_id=apps_vpc_id,
@@ -122,7 +137,7 @@ educate_app_tg = lb.TargetGroup(
 )
 
 http_lb_listener = lb.Listener(
-    f"educate-app-http-listener-{env}",
+    f"{proj}-http-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=80,
     default_actions=[
@@ -138,7 +153,7 @@ http_lb_listener = lb.Listener(
 )
 
 https_lb_listener = lb.Listener(
-    f"educate-app-https-listener-{env}",
+    f"{proj}-https-listener-{env}",
     load_balancer_arn=educate_app_alb.arn,
     port=443,
     protocol="HTTPS",
@@ -148,7 +163,7 @@ https_lb_listener = lb.Listener(
 )
 
 educate_target_group_attachment = lb.TargetGroupAttachment(
-    f"educate-app-tg-attachement-{env}",
+    f"{proj}-tg-attachement-{env}",
     target_group_arn=educate_app_tg.arn,
     target_id=educate_app_instance.get_instance_id(),
     port=80,
@@ -168,7 +183,7 @@ alias = route53.RecordAliasArgs(
 
 if env == "prod":
     record_lms = route53.Record(
-        f"educate-app-record-lms-{env}",
+        f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
         name=f"{zone.name}",
         type="A",
@@ -177,7 +192,7 @@ if env == "prod":
 
     for record in records_required:
         add_record = route53.Record(
-            f"educate-app-record-{record}-{env}",
+            f"{proj}-record-{record}-{env}",
             zone_id=zone.zone_id,
             name=f"{record}.{zone.name}",
             type="A",
@@ -186,7 +201,7 @@ if env == "prod":
         records.append(add_record)
 else:
     record_lms = route53.Record(
-        f"educate-app-record-lms-{env}",
+        f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
         name=f"{env}.{zone.name}",
         type="A",
@@ -195,15 +210,14 @@ else:
 
     for record in records_required:
         add_record = route53.Record(
-            f"educate-app-record-{record}-{env}",
+            f"{proj}-record-{record}-{env}",
             zone_id=zone.zone_id,
             name=f"{record}.{env}.{zone.name}",
             type="A",
             aliases=[alias],
         )
         records.append(add_record)
-# record = route53.Record.get(resource_name="studio.prod.3ducate.co.uk", id="Z3IBKAQH9QPEYP_studio.prod.3ducate.co.uk_A")
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)
-export("domainName", record_lms.fqdn)
+export("fullDomainName", record_lms.fqdn)

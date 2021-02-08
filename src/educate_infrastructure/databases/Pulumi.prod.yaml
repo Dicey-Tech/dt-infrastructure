@@ -1,2 +1,3 @@
 config:
   aws:region: eu-west-2
+  sql:snapshot: arn:aws:rds:eu-west-2:198538058567:snapshot:educate-sql-db-14-01-2021

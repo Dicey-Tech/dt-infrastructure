@@ -1,6 +1,6 @@
 #!/bin/bash
-su ubuntu
-cd ~
+sudo su ubuntu
+cd /home/ubuntu
 
 # Fresh installations of Ubuntu do not have a locale yet, and this will cause
 # the Open edX installer scripts to fail, so we'll  set it now.
