@@ -11,7 +11,7 @@ from pulumi import dynamic
 
 class ConnectionArgs(TypedDict):
     instance_id: pulumi.Input[str]
-    ssm_document: pulumi.Input[str]
+    session_document: pulumi.Input[str]
     script_document: pulumi.Input[str]  # "AWS-RunShellScript"
 
 
@@ -53,36 +53,38 @@ class RunCommandResult(TypedDict):
     """The stderr of the command that was executed."""
 
 
+# TODO catch error when command fails
 class RemoteExecProvider(ProvisionerProvider):
     def on_create(self, inputs: Any) -> Any:
         ssm = boto3.client("ssm")
+        session = ssm.start_session(
+            Target=inputs["conn"]["instance_id"],
+            DocumentName="SSM-SessionManagerRunShell",
+        )
 
         try:
-            response = ssm.send_command(
+            results = []
+            output = ssm.send_command(
                 InstanceIds=[inputs["conn"]["instance_id"]],
                 DocumentName=inputs["conn"]["script_document"],
                 Parameters={"commands": inputs["commands"]},
             )
 
-            command_id = response.get("Command", {}).get("CommandId", None)
+            command_id = output.get("Command", {}).get("CommandId", None)
+
             command_invocation = ssm.list_command_invocations(  # noqa F841
                 CommandId=command_id, Details=True
             )["CommandInvocations"]
-            """
-            results = []
 
             results.append(
                 {
-                    "status": "".join(command_invocation["Status"]),
-                    "stderr": "".join(command_invocation["Status"]),
+                    "CommandId": output["Command"]["CommandId"],
+                    "Status": command_invocation,
                 }
             )
-
-            inputs["results"] = results
-            print(f"results: {results}")
-            """
         finally:
-            print("RemoteExecProvider")
+            ssm.terminate_session(SessionId=session["SessionId"])
+            pulumi.info(f"results: {results}")
         return inputs
 
 

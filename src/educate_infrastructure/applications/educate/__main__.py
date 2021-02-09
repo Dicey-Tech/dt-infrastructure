@@ -109,13 +109,17 @@ instance_config = DTEducateConfig(
 educate_app_instance = DTEc2(instance_config)
 
 install_openedx = RemoteExec(
-    f"educate-provision-{env}",
+    f"{proj}-provision-{env}",
     ConnectionArgs(
         instance_id=educate_app_instance.get_instance_id(),
-        ssm_document="nothing",
+        ssm_document="SSM-SessionManagerRunShell",
         script_document="AWS-RunShellScript",
     ),
-    commands=["echo 'Start running services'", "whoami", "cd ~ && touch test.log"],
+    commands=[
+        "/bin/bash",
+        'runuser -l ubuntu -c \
+        "cd ~ && sudo nohup sh /home/ubuntu/edx.platform-install.sh &"',
+    ],
     opts=ResourceOptions(depends_on=[educate_app_instance]),
 )
 
