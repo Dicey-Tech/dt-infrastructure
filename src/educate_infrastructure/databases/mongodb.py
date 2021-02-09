@@ -28,7 +28,7 @@ class DTMongoDBConfig(BaseModel):
     vpc_id: Output[Text]
     subnet_id: Output[Text]
     instance_type: ec2.InstanceType
-    volume_size: Optional[PositiveInt] = 50
+    volume_size: Optional[PositiveInt] = 8
     commands: Optional[Text]
 
     class Config:
@@ -145,8 +145,30 @@ class DTMongoDB(ComponentResource):
             ami=self.ami.id,
             iam_instance_profile=mongodb_profile.id,
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
-                delete_on_termination=True, volume_size=instance_config.volume_size
+                delete_on_termination=True,
+                volume_size=instance_config.volume_size,
+                encrypted=True,
             ),
+            ebs_block_devices=[
+                ec2.InstanceEbsBlockDeviceArgs(
+                    device_name="/dev/sdf",
+                    volume_size=20,
+                    encrypted=True,
+                    tags={**self.tags, "Name": "MongoDB Data"},
+                ),
+                ec2.InstanceEbsBlockDeviceArgs(
+                    device_name="/dev/sdg",
+                    volume_size=4,
+                    encrypted=True,
+                    tags={**self.tags, "Name": "MongoDB Journal"},
+                ),
+                ec2.InstanceEbsBlockDeviceArgs(
+                    device_name="/dev/sdh",
+                    volume_size=2,
+                    encrypted=True,
+                    tags={**self.tags, "Name": "MongoDB Log"},
+                ),
+            ],
             tags={**self.tags, "Name": "MongoDB Prod"},
             opts=ResourceOptions(parent=self),
         )

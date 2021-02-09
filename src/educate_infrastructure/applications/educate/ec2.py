@@ -83,7 +83,9 @@ class DTEc2(ComponentResource):
             ami=self.ami.id,  # "ami-0a0be606699ba3f19"
             iam_instance_profile=instance_config.iam_instance_profile_id,
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
-                delete_on_termination=True, volume_size=instance_config.volume_size
+                delete_on_termination=True,
+                volume_size=instance_config.volume_size,
+                encrypted=True,
             ),
             tags=self.tags,
             opts=ResourceOptions(parent=self),
