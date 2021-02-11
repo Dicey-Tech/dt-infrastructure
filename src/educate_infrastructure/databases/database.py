@@ -1,7 +1,7 @@
 """ RDS """
 from typing import Dict, List, Optional, Text, Union
 
-from pulumi import ComponentResource, Output, ResourceOptions, info
+from pulumi import ComponentResource, Output, ResourceOptions, info, Alias
 from pulumi_aws import rds
 from pulumi_aws.ec2 import SecurityGroup
 from pydantic import BaseModel, PositiveInt, SecretStr, conint
@@ -187,29 +187,29 @@ class DTAuroraCluster(ComponentResource):
             engine_version=db_config.engine_version,
             final_snapshot_identifier=f"{db_config.instance_name}-{db_config.engine}-final-snapshot",
             # db_cluster_parameter_group_name=self.parameter_group.name,
-            # master_password=db_config.password.get_secret_value(),
             port=db_config.port,
             skip_final_snapshot=not db_config.take_final_snapshot,
             tags=db_config.tags,
-            master_username=db_config.username,
             vpc_security_group_ids=[group.id for group in db_config.security_groups],
             snapshot_identifier=db_config.snapshot_identifier,
             opts=ResourceOptions(parent=self),
         )
 
-        self.cluster_instances = []
-        self.cluster_instances.append(
-            rds.ClusterInstance(
-                f"{db_config.instance_name}-{db_config.engine}-instance-0",
-                identifier=db_config.instance_name,
-                cluster_identifier=self.db_cluster.id,
-                engine=db_config.engine,
-                engine_version=db_config.engine_version,
-                instance_class=db_config.instance_size,
-                tags=db_config.tags,
-                opts=ResourceOptions(parent=self),
-            )
+        self.instance = rds.ClusterInstance(
+            f"{db_config.instance_name}-{db_config.engine}-instance-0",
+            identifier=db_config.instance_name,
+            cluster_identifier=self.db_cluster.id,
+            engine=db_config.engine,
+            engine_version=db_config.engine_version,
+            instance_class=db_config.instance_size,
+            tags=db_config.tags,
+            opts=ResourceOptions(
+                parent=self,
+            ),
         )
+
+        self.cluster_instances = []
+        self.cluster_instances.append(self.instance)
 
         component_outputs = {
             # "parameter_group": self.parameter_group,
@@ -219,7 +219,7 @@ class DTAuroraCluster(ComponentResource):
 
         self.register_outputs(component_outputs)
 
-        info(msg=f"{str(self.db_cluster.cluster_resource_id)} created.", resource=self)
+        info(msg=f"{str(self.db_cluster.cluster_identifier)} created.", resource=self)
 
     def get_endpoint(self) -> str:
         return self.db_cluster.endpoint

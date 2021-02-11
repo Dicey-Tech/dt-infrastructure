@@ -40,7 +40,6 @@ mysql_db_sg = ec2.SecurityGroup(
 aurora_cluster_config = DTAuroraConfig(
     instance_name=f"educate-sql-db-{env}",
     subnet_group_name=db_subnet_group_name,
-    # password="password",
     security_groups=[mysql_db_sg],
     tags={"pulumi_managed": "True"},
     snapshot_identifier=snapshot,
@@ -61,4 +60,5 @@ mongodb_config = DTMongoDBConfig(
 mongodb_cluster = DTMongoDB(mongodb_config)
 
 export("mongodb_endpoint", mongodb_cluster.get_private_dns())
+export("mongodb_instance_id", mongodb_cluster.get_instance_id())
 export("mysql_endpoint", aurora_cluster.get_endpoint())

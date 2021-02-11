@@ -184,3 +184,6 @@ class DTMongoDB(ComponentResource):
 
     def get_private_dns(self) -> Text:
         return self._instance.private_dns
+
+    def get_instance_id(self) -> Text:
+        return self._instance.id
