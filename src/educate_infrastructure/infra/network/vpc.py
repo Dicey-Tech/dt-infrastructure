@@ -67,6 +67,7 @@ class DTVpc(ComponentResource):
             f"{self.name}-vpc",
             cidr_block=str(network_config.cidr_block),
             assign_generated_ipv6_cidr_block=True,
+            enable_dns_hostnames=True,
             tags={**self.tags, "Name": self.name},
             opts=ResourceOptions(parent=self),
         )
