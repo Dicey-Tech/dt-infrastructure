@@ -152,7 +152,7 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
 
 # TODO Move Route53 setup to its own project
 # https://www.pulumi.com/docs/reference/pkg/aws/route53/record/#alias-record
-zone = route53.get_zone(name="3ducate.co.uk")
+zone = route53.get_zone(name="diceytech.co.uk")
 records_required = DTEc2.get_required_records(env)
 records = []
 
@@ -166,7 +166,7 @@ if env == "prod":
     record_lms = route53.Record(
         f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
-        name=f"{zone.name}",
+        name=f"educate.{zone.name}",
         type="A",
         aliases=[alias],
     )
