@@ -169,6 +169,7 @@ class DTMongoDB(ComponentResource):
                     tags={**self.tags, "Name": "MongoDB Log"},
                 ),
             ],
+            disable_api_termination=True,
             tags={**self.tags, "Name": "MongoDB Prod"},
             opts=ResourceOptions(parent=self),
         )

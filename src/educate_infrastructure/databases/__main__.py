@@ -43,7 +43,7 @@ aurora_cluster_config = DTAuroraConfig(
     security_groups=[mysql_db_sg],
     tags={"pulumi_managed": "True"},
     snapshot_identifier=snapshot,
-    prevent_delete=False,  # For testing
+    prevent_delete=True,  # For testing
     multi_az=False,
 )
 

@@ -139,7 +139,7 @@ https_lb_listener = lb.Listener(
     port=443,
     protocol="HTTPS",
     ssl_policy="ELBSecurityPolicy-2016-08",
-    certificate_arn="arn:aws:acm:eu-west-2:198538058567:certificate/4e597971-7430-44a7-b559-190c3ac7523d",
+    certificate_arn="arn:aws:acm:eu-west-2:198538058567:certificate/964f24fa-cc5b-45be-a741-1e468f4b259b",
     default_actions=[{"type": "forward", "target_group_arn": educate_app_tg.arn}],
 )
 
@@ -166,7 +166,7 @@ if env == "prod":
     record_lms = route53.Record(
         f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
-        name=f"educate.{zone.name}",
+        name=f"learn.{zone.name}",
         type="A",
         aliases=[alias],
     )
@@ -184,7 +184,7 @@ else:
     record_lms = route53.Record(
         f"{proj}-record-lms-{env}",
         zone_id=zone.zone_id,
-        name=f"{env}.{zone.name}",
+        name=f"learn.{env}.{zone.name}",
         type="A",
         aliases=[alias],
     )

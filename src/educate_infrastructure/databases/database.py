@@ -103,7 +103,7 @@ class DTRDSInstance(ComponentResource):
             name=f"{db_config.instance_name}-{db_config.engine}-parameter-group",
             opts=ResourceOptions(parent=self),
         )
-
+        # TODO add date to make final snapshot unique
         self.db_instance = rds.Instance(
             f"{db_config.instance_name}-{db_config.engine}-instance",
             allocated_storage=db_config.storage,

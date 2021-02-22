@@ -79,7 +79,7 @@ class DTEc2(ComponentResource):
             instance_type=self.size,
             subnet_id=instance_config.app_subnet_id,
             vpc_security_group_ids=[instance_config.security_group_id],
-            user_data=self.user_data,
+            # user_data=self.user_data,
             ami=self.ami.id,  # "ami-0a0be606699ba3f19"
             iam_instance_profile=instance_config.iam_instance_profile_id,
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
@@ -88,6 +88,7 @@ class DTEc2(ComponentResource):
                 encrypted=True,
             ),
             tags=self.tags,
+            disable_api_termination=True,
             opts=ResourceOptions(parent=self),
         )
 
