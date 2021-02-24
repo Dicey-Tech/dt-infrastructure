@@ -114,9 +114,10 @@ class DTEc2(ComponentResource):
     @staticmethod
     def get_required_records(env: str) -> List[str]:
         if env == "dev":
-            return ["discovery", "preview", "studio"]
+            return ["app", "discovery", "preview", "studio"]
         else:
             return [
+                "app",
                 "blockstore",
                 "credentials",
                 "discovery",
