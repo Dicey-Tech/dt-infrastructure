@@ -1,18 +1,26 @@
 # TODO Replace PYTHONPATH edit of .envrc with package install
 # https://realpython.com/python-import/#create-and-install-a-local-package
-import setuptools
+import io
+import os
+from setuptools import find_packages, setup
 
-with open("README.md") as fp:
-    long_description = fp.read()
+HERE = os.path.abspath(os.path.dirname(__file__))
 
-setuptools.setup(
+
+def load_readme():
+    with io.open(os.path.join(HERE, "README.md"), "rt", encoding="utf8") as f:
+        readme = f.read()
+
+    return readme
+
+
+setup(
     name="educate_infrastructure",
     version="0.0.1",
     description="Pulumi project for Dicey Tech's Infrastructure",
-    long_description=long_description,
+    long_description=load_readme(),
     long_description_content_type="text/markdown",
     author="Sofiane Bebert",
-    package_dir={"": "educate_infrastructure"},
-    packages=setuptools.find_packages(where="educate_infrastructure"),
+    packages=find_packages(exclude=["tests*"]),
     python_requires=">=3.6",
 )
