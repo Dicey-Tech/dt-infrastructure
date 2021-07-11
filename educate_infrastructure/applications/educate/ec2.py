@@ -8,7 +8,7 @@ This includes:
 from typing import List, Text, Optional
 
 from pulumi import ComponentResource, Output, ResourceOptions, info
-from pulumi_aws import ec2, get_ami, GetAmiFilterArgs, iam
+from pulumi_aws import ec2, GetAmiFilterArgs, iam
 from pydantic import BaseModel, PositiveInt
 
 
@@ -59,7 +59,7 @@ class DTEc2(ComponentResource):
         self.size = instance_config.instance_type
 
         # Ubuntu 20.04 LTS - Focal
-        self.ami = get_ami(
+        self.ami = ec2.get_ami(
             most_recent=True,
             owners=["679593333241"],
             filters=[
@@ -80,7 +80,7 @@ class DTEc2(ComponentResource):
             subnet_id=instance_config.app_subnet_id,
             vpc_security_group_ids=[instance_config.security_group_id],
             # user_data=self.user_data,
-            ami=self.ami.id,  # "ami-0a0be606699ba3f19"
+            ami="ami-0a0be606699ba3f19",  # self.ami.id,
             iam_instance_profile=instance_config.iam_instance_profile_id,
             root_block_device=ec2.InstanceRootBlockDeviceArgs(
                 delete_on_termination=True,
@@ -110,21 +110,3 @@ class DTEc2(ComponentResource):
 
     def get_instance_id(self) -> Text:
         return self._instance.id
-
-    @staticmethod
-    def get_required_records(env: str) -> List[str]:
-        if env == "dev":
-            return ["app", "discovery", "preview", "studio"]
-        else:
-            return [
-                "app",
-                "blockstore",
-                "credentials",
-                "discovery",
-                "forum",
-                "insights",
-                "notes",
-                "preview",
-                "shop",
-                "studio",
-            ]

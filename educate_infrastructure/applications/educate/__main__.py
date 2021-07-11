@@ -1,6 +1,13 @@
 """ Open edX native deployment on AWS"""
 
-from pulumi import Config, get_stack, get_project, export, StackReference
+from pulumi import (
+    Config,
+    get_stack,
+    get_project,
+    export,
+    StackReference,
+    ResourceOptions,
+)
 from pulumi_aws import ec2, iam, lb, route53
 
 from educate_infrastructure.applications.educate.ec2 import DTEc2, DTEducateConfig
@@ -153,51 +160,36 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
 # TODO Move Route53 setup to its own project
 # https://www.pulumi.com/docs/reference/pkg/aws/route53/record/#alias-record
 zone = route53.get_zone(name="diceytech.co.uk")
-records_required = DTEc2.get_required_records(env)
 records = []
 
-alias = route53.RecordAliasArgs(
+lms_record_alias = route53.RecordAliasArgs(
     name=educate_app_alb.dns_name,
     zone_id=educate_app_alb.zone_id,
     evaluate_target_health=True,
 )
 
-if env == "prod":
-    record_lms = route53.Record(
-        f"{proj}-record-lms-{env}",
-        zone_id=zone.zone_id,
-        name=f"learn.{zone.name}",
-        type="A",
-        aliases=[alias],
-    )
+services_record_alias = route53.RecordAliasArgs(
+    name=f"learn.{zone.name}",
+    zone_id=educate_app_alb.zone_id,
+    evaluate_target_health=True,
+)
 
-    for record in records_required:
-        add_record = route53.Record(
-            f"{proj}-record-{record}-{env}",
-            zone_id=zone.zone_id,
-            name=f"{record}.{zone.name}",
-            type="A",
-            aliases=[alias],
-        )
-        records.append(add_record)
-else:
-    record_lms = route53.Record(
-        f"{proj}-record-lms-{env}",
-        zone_id=zone.zone_id,
-        name=f"learn.{env}.{zone.name}",
-        type="A",
-        aliases=[alias],
-    )
+record_lms = route53.Record(
+    f"{proj}-record-lms-{env}",
+    zone_id=zone.zone_id,
+    name=f"learn.{zone.name}",
+    type="A",
+    aliases=[lms_record_alias],
+)
 
-    for record in records_required:
-        add_record = route53.Record(
-            f"{proj}-record-{record}-{env}",
-            zone_id=zone.zone_id,
-            name=f"{record}.{env}.{zone.name}",
-            type="A",
-            aliases=[alias],
-        )
-        records.append(add_record)
+record_services = route53.Record(
+    f"{proj}-record-services-{env}",
+    zone_id=zone.zone_id,
+    name=f"*.{zone.name}",
+    type="CNAME",
+    ttl=3600,
+    records=[f"learn.{zone.name}"],
+)
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)
