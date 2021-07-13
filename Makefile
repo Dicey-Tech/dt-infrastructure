@@ -2,12 +2,12 @@ help: ## display this help message
 	@echo "Please use \`make <target>' where <target> is one of"
 	@grep '^[a-zA-Z]' $(MAKEFILE_LIST) | sort | awk -F ':.*?## ' 'NF==2 {printf "\033[36m  %-25s\033[0m %s\n", $$1, $$2}'
 
-EDUCATE = src/educate_infrastructure/applications/educate
-NETWORKING = src/educate_infrastructure/infra/network
-DATABASES = src/educate_infrastructure/databases
+EDUCATE = educate_infrastructure/applications/educate
+NETWORKING = educate_infrastructure/infra/network
+DATABASES = educate_infrastructure/databases
 
 dev.setup:
-	pip install requirement.txt
+	pip install -r requirements.txt
 	pre-commit install
 
 up:

@@ -1,6 +1,13 @@
 """ Open edX native deployment on AWS"""
 
-from pulumi import Config, get_stack, get_project, export, StackReference
+from pulumi import (
+    Config,
+    get_stack,
+    get_project,
+    export,
+    StackReference,
+    ResourceOptions,
+)
 from pulumi_aws import ec2, iam, lb, route53
 
 from educate_infrastructure.applications.educate.ec2 import DTEc2, DTEducateConfig
@@ -13,8 +20,6 @@ networking_stack = StackReference("BbrSofiane/networking/prod")
 apps_vpc_id = networking_stack.get_output("apps_vpc_id")
 apps_public_subnet_ids = networking_stack.get_output("apps_public_subnet_ids")
 apps_private_subnet_ids = networking_stack.get_output("apps_private_subnet_ids")
-
-# TODO Add resource dependencies opts=pulumi.ResourceOptions(depends_on=[server])
 
 tags = {
     "pulumi_managed": "true",
@@ -44,12 +49,18 @@ ssm_role_policy_attach = iam.RolePolicyAttachment(
     f"ssm-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    opts=ResourceOptions(
+        parent=educate_app_role,
+    ),
 )
 
 s3_role_policy_attach = iam.RolePolicyAttachment(
     f"s3-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonS3FullAccess",
+    opts=ResourceOptions(
+        parent=educate_app_role,
+    ),
 )
 
 educate_app_profile = iam.InstanceProfile(f"{proj}-profile", role=educate_app_role.name)
@@ -100,13 +111,15 @@ instance_config = DTEducateConfig(
 
 educate_app_instance = DTEc2(instance_config)
 
-# TODO Add enable_deletion_protection=True, access_logs
+# TODO Add access_logs
 educate_app_alb = lb.LoadBalancer(
     f"{proj}-alb-{env}",
     load_balancer_type="application",
     security_groups=[security_group.id],
     subnets=apps_public_subnet_ids,
+    enable_deletion_protection=True,
     tags=tags,
+    opts=ResourceOptions(parent=educate_app_instance),
 )
 
 educate_app_tg = lb.TargetGroup(
@@ -131,6 +144,7 @@ http_lb_listener = lb.Listener(
             ),
         )
     ],
+    opts=ResourceOptions(parent=educate_app_alb),
 )
 
 https_lb_listener = lb.Listener(
@@ -141,6 +155,7 @@ https_lb_listener = lb.Listener(
     ssl_policy="ELBSecurityPolicy-2016-08",
     certificate_arn="arn:aws:acm:eu-west-2:198538058567:certificate/964f24fa-cc5b-45be-a741-1e468f4b259b",
     default_actions=[{"type": "forward", "target_group_arn": educate_app_tg.arn}],
+    opts=ResourceOptions(parent=educate_app_alb),
 )
 
 educate_target_group_attachment = lb.TargetGroupAttachment(
@@ -148,56 +163,44 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
     target_group_arn=educate_app_tg.arn,
     target_id=educate_app_instance.get_instance_id(),
     port=80,
+    opts=ResourceOptions(
+        parent=educate_app_tg,
+    ),
 )
 
 # TODO Move Route53 setup to its own project
 # https://www.pulumi.com/docs/reference/pkg/aws/route53/record/#alias-record
 zone = route53.get_zone(name="diceytech.co.uk")
-records_required = DTEc2.get_required_records(env)
 records = []
 
-alias = route53.RecordAliasArgs(
+lms_record_alias = route53.RecordAliasArgs(
     name=educate_app_alb.dns_name,
     zone_id=educate_app_alb.zone_id,
     evaluate_target_health=True,
 )
 
-if env == "prod":
-    record_lms = route53.Record(
-        f"{proj}-record-lms-{env}",
-        zone_id=zone.zone_id,
-        name=f"learn.{zone.name}",
-        type="A",
-        aliases=[alias],
-    )
+services_record_alias = route53.RecordAliasArgs(
+    name=f"learn.{zone.name}",
+    zone_id=educate_app_alb.zone_id,
+    evaluate_target_health=True,
+)
 
-    for record in records_required:
-        add_record = route53.Record(
-            f"{proj}-record-{record}-{env}",
-            zone_id=zone.zone_id,
-            name=f"{record}.{zone.name}",
-            type="A",
-            aliases=[alias],
-        )
-        records.append(add_record)
-else:
-    record_lms = route53.Record(
-        f"{proj}-record-lms-{env}",
-        zone_id=zone.zone_id,
-        name=f"learn.{env}.{zone.name}",
-        type="A",
-        aliases=[alias],
-    )
+record_lms = route53.Record(
+    f"{proj}-record-lms-{env}",
+    zone_id=zone.zone_id,
+    name=f"learn.{zone.name}",
+    type="A",
+    aliases=[lms_record_alias],
+)
 
-    for record in records_required:
-        add_record = route53.Record(
-            f"{proj}-record-{record}-{env}",
-            zone_id=zone.zone_id,
-            name=f"{record}.{env}.{zone.name}",
-            type="A",
-            aliases=[alias],
-        )
-        records.append(add_record)
+record_services = route53.Record(
+    f"{proj}-record-services-{env}",
+    zone_id=zone.zone_id,
+    name=f"*.{zone.name}",
+    type="CNAME",
+    ttl=3600,
+    records=[f"learn.{zone.name}"],
+)
 
 export("instanceId", educate_app_instance.get_instance_id())
 export("loadBalancerDnsName", educate_app_alb.dns_name)

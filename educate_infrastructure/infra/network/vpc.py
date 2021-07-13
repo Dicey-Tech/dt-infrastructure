@@ -96,6 +96,7 @@ class DTVpc(ComponentResource):
 
         self.public_subnet_ids: List[ec2.Subnet] = []
         self.nat_gateway_ids: Dict[Text, Text] = {}
+        self.has_nat_gateway = False  # TODO temporary fix to only use one NAT gateway
         self.private_subnet_ids: List[ec2.Subnet] = []
         zones: List[Text] = get_availability_zones().names[: network_config.az_count]
 
@@ -177,35 +178,38 @@ class DTVpc(ComponentResource):
                 opts=ResourceOptions(parent=self),
             )
 
-            nat_gateway = ec2.NatGateway(
-                f"{self.name}-natgw-{zone}",
-                subnet_id=subnet.id,
-                allocation_id=eip.id,
-                tags=self.tags,
-                opts=ResourceOptions(parent=self),
-            )
-
-            self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
+            if not self.has_nat_gateway:
+                nat_gateway = ec2.NatGateway(
+                    f"{self.name}-natgw-{zone}",
+                    subnet_id=subnet.id,
+                    allocation_id=eip.id,
+                    tags=self.tags,
+                    opts=ResourceOptions(parent=self),
+                )
+                self.nat_gateway_ids[f"{zone}"] = nat_gateway.id
+                self.has_nat_gateway = True
+        # Temporary fix removing any routing from the unused private subnet
         else:
-            private_rt = ec2.RouteTable(
-                f"{name_pre}-rt-{zone}",
-                vpc_id=self.vpc.id,
-                routes=[
-                    ec2.RouteTableRouteArgs(
-                        cidr_block="0.0.0.0/0",
-                        gateway_id=self.nat_gateway_ids[f"{zone}"],
-                    ),
-                ],
-                tags=self.tags,
-                opts=ResourceOptions(parent=self),
-            )
+            if f"{zone}" in self.nat_gateway_ids:
+                route_args = ec2.RouteTableRouteArgs(
+                    cidr_block="0.0.0.0/0",
+                    gateway_id=self.nat_gateway_ids[f"{zone}"],
+                )
 
-            ec2.RouteTableAssociation(
-                f"{name_pre}-rta-{zone}",
-                route_table_id=private_rt.id,
-                subnet_id=subnet.id,
-                opts=ResourceOptions(parent=self),
-            )
+                private_rt = ec2.RouteTable(
+                    f"{name_pre}-rt-{zone}",
+                    vpc_id=self.vpc.id,
+                    routes=[route_args],
+                    tags=self.tags,
+                    opts=ResourceOptions(parent=self),
+                )
+
+                ec2.RouteTableAssociation(
+                    f"{name_pre}-rta-{zone}",
+                    route_table_id=private_rt.id,
+                    subnet_id=subnet.id,
+                    opts=ResourceOptions(parent=self),
+                )
 
             self.private_subnet_ids.append(subnet.id)
 
