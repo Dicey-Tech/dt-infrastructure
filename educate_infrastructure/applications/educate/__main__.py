@@ -21,8 +21,6 @@ apps_vpc_id = networking_stack.get_output("apps_vpc_id")
 apps_public_subnet_ids = networking_stack.get_output("apps_public_subnet_ids")
 apps_private_subnet_ids = networking_stack.get_output("apps_private_subnet_ids")
 
-# TODO Add resource dependencies opts=pulumi.ResourceOptions(depends_on=[server])
-
 tags = {
     "pulumi_managed": "true",
 }
@@ -51,12 +49,18 @@ ssm_role_policy_attach = iam.RolePolicyAttachment(
     f"ssm-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    opts=ResourceOptions(
+        parent=educate_app_role,
+    ),
 )
 
 s3_role_policy_attach = iam.RolePolicyAttachment(
     f"s3-{proj}-policy-attach",
     role=educate_app_role.name,
     policy_arn="arn:aws:iam::aws:policy/AmazonS3FullAccess",
+    opts=ResourceOptions(
+        parent=educate_app_role,
+    ),
 )
 
 educate_app_profile = iam.InstanceProfile(f"{proj}-profile", role=educate_app_role.name)
@@ -107,13 +111,15 @@ instance_config = DTEducateConfig(
 
 educate_app_instance = DTEc2(instance_config)
 
-# TODO Add enable_deletion_protection=True, access_logs
+# TODO Add access_logs
 educate_app_alb = lb.LoadBalancer(
     f"{proj}-alb-{env}",
     load_balancer_type="application",
     security_groups=[security_group.id],
     subnets=apps_public_subnet_ids,
+    enable_deletion_protection=True,
     tags=tags,
+    opts=ResourceOptions(parent=educate_app_instance),
 )
 
 educate_app_tg = lb.TargetGroup(
@@ -138,6 +144,7 @@ http_lb_listener = lb.Listener(
             ),
         )
     ],
+    opts=ResourceOptions(parent=educate_app_alb),
 )
 
 https_lb_listener = lb.Listener(
@@ -148,6 +155,7 @@ https_lb_listener = lb.Listener(
     ssl_policy="ELBSecurityPolicy-2016-08",
     certificate_arn="arn:aws:acm:eu-west-2:198538058567:certificate/964f24fa-cc5b-45be-a741-1e468f4b259b",
     default_actions=[{"type": "forward", "target_group_arn": educate_app_tg.arn}],
+    opts=ResourceOptions(parent=educate_app_alb),
 )
 
 educate_target_group_attachment = lb.TargetGroupAttachment(
@@ -155,6 +163,9 @@ educate_target_group_attachment = lb.TargetGroupAttachment(
     target_group_arn=educate_app_tg.arn,
     target_id=educate_app_instance.get_instance_id(),
     port=80,
+    opts=ResourceOptions(
+        parent=educate_app_tg,
+    ),
 )
 
 # TODO Move Route53 setup to its own project
